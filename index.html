@@ -1,682 +1,117 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PDF Split Tool</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📄 PDF Splitter & Export Tool</title>
   <style>
-    :root {
-      --primary: #3b82f6;
-      --primary-dark: #1d4ed8;
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --border: #e2e8f0;
-      --text: #1e293b;
-      --muted: #64748b;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, var(--bg) 0%, #e0f2fe 100%);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-
-    header {
-      background: var(--card);
-      box-shadow: var(--shadow);
-      padding: 2rem 1rem;
+      font-family: Arial, sans-serif;
       text-align: center;
-      border-bottom: 1px solid var(--border);
+      background: #f4f6f9;
+      padding: 30px;
     }
-
-    header h1 {
-      font-size: 2.5rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 0.5rem;
+    h1 {
+      color: #2c3e50;
     }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 1.1rem;
-      max-width: 600px;
-      margin: 0 auto;
+    #pdf-upload {
+      margin: 20px 0;
     }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #007bff;
     }
-
-    .uploader {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: var(--shadow);
-      margin-bottom: 2rem;
-    }
-
-    .dropzone {
-      display: block;
-      width: 100%;
-      padding: 3rem 2rem;
-      border: 3px dashed var(--border);
-      border-radius: 12px;
-      text-align: center;
-      font-size: 1.2rem;
-      color: var(--muted);
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
       cursor: pointer;
-      transition: all 0.3s ease;
-      background: linear-gradient(45deg, #f8fafc 25%, transparent 25%),
-                  linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
-                  linear-gradient(45deg, transparent 75%, #f8fafc 75%),
-                  linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-    }
-
-    .dropzone:hover, .dropzone.dragover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background-color: rgba(59, 130, 246, 0.05);
-    }
-
-    .toolbar {
-      display: flex;
-      gap: 1rem;
-      margin: 2rem 0 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem;
       border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: var(--primary);
-      color: white;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .btn:hover {
-      background: var(--primary-dark);
-      transform: translateY(-1px);
-    }
-
-    .btn.muted {
-      background: var(--muted);
-      color: white;
-    }
-
-    .btn.muted:hover {
-      background: #475569;
-    }
-
-    .status {
-      text-align: center;
-      font-weight: 500;
-      margin: 1rem 0;
-      color: var(--muted);
-    }
-
-    .progress {
-      width: 100%;
-      height: 8px;
-      background: var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--primary), var(--success));
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    .pages {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1.5rem;
-      margin-top: 2rem;
-    }
-
-    .page-card {
-      background: var(--card);
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      transition: all 0.3s ease;
-      cursor: grab;
-      border: 2px solid transparent;
-    }
-
-    .page-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-
-    .page-card:active {
-      cursor: grabbing;
-    }
-
-    .page-thumb {
-      width: 100%;
-      height: 200px;
-      object-fit: contain;
-      background: #f8fafc;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .page-meta {
-      padding: 1rem;
-    }
-
-    .page-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .page-info div:first-child {
-      font-weight: 600;
-      font-size: 1.1rem;
-    }
-
-    .small {
-      font-size: 0.875rem;
-      color: var(--muted);
-    }
-
-    .page-actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .icon-btn {
-      padding: 0.5rem;
-      border: 1px solid var(--border);
       border-radius: 6px;
-      background: white;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 40px;
+      background: #28a745;
+      color: white;
+      transition: background 0.3s;
     }
-
-    .icon-btn:hover {
-      background: var(--bg);
-      border-color: var(--primary);
+    button:hover:not(:disabled) {
+      background: #218838;
     }
-
-    @media (max-width: 768px) {
-      header h1 {
-        font-size: 2rem;
-      }
-      
-      .container {
-        padding: 1rem;
-      }
-      
-      .uploader {
-        padding: 1rem;
-      }
-      
-      .toolbar {
-        flex-direction: column;
-      }
-      
-      .btn {
-        justify-content: center;
-      }
-      
-      .pages {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .sortable-ghost {
-      opacity: 0.5;
-    }
-
-    .sortable-chosen {
-      transform: rotate(5deg);
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
     }
   </style>
-  <!-- Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@2.22.0/dist/pdf-lib.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>📄 PDF Split Tool</h1>
-    <p class="subtitle">Upload a PDF → reorder pages → download as individual PDFs or images</p>
-  </header>
-  <main class="container">
-    <section class="uploader">
-      <label id="dropzone" class="dropzone">📁 Click or drop a PDF here</label>
-      <input id="fileInput" type="file" accept="application/pdf" hidden />
-      <div class="toolbar">
-        <button id="btnExportPdfsZip" class="btn">📦 Download Pages as PDF ZIP</button>
-        <button id="btnExportAllPng" class="btn">🖼️ Export All as PNG</button>
-        <button id="btnExportAllJpg" class="btn">🖼️ Export All as JPG</button>
-        <button id="btnClear" class="btn muted">🗑️ Clear</button>
-      </div>
-      <div id="status" class="status">No file loaded.</div>
-      <div class="progress"><div id="progressBar" class="bar"></div></div>
-    </section>
-    <section id="pages" class="pages" aria-live="polite"></section>
-  </main>
+  <h1>📄 PDF Splitter & Export Tool</h1>
+
+  <input type="file" id="pdf-upload" accept="application/pdf" />
+  <br />
+  <button id="export-zip" disabled>Export Pages as ZIP</button>
+  <p id="status">Upload a PDF to begin.</p>
+
+  <!-- ✅ Official pdf-lib -->
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <!-- ✅ JSZip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <!-- ✅ FileSaver -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+    const { PDFDocument } = PDFLib; // ✅ safe reference
+    const uploadInput = document.getElementById("pdf-upload");
+    const exportBtn = document.getElementById("export-zip");
+    const statusText = document.getElementById("status");
 
-    const fileInput = document.getElementById('fileInput');
-    const dropzone = document.getElementById('dropzone');
-    const pagesEl = document.getElementById('pages');
-    const statusEl = document.getElementById('status');
-    const progressBar = document.getElementById('progressBar');
-    const btnExportAllPng = document.getElementById('btnExportAllPng');
-    const btnExportAllJpg = document.getElementById('btnExportAllJpg');
-    const btnExportPdfsZip = document.getElementById('btnExportPdfsZip');
-    const btnClear = document.getElementById('btnClear');
+    let uploadedPdfBytes = null;
 
-    let originalPdfBytes = null;
-    let pdfJsDoc = null;
-    let pageState = []; // { pageNum, fullCanvas, rotation, thumbUrl }
+    // Handle PDF Upload
+    uploadInput.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    function setStatus(text){ 
-      statusEl.textContent = text; 
-      console.log('[status]', text); 
-    }
-    
-    function setProgress(p){ 
-      progressBar.style.width = `${Math.round(p*100)}%`; 
-    }
+      statusText.textContent = "📥 Reading PDF...";
+      uploadedPdfBytes = await file.arrayBuffer();
 
-    // Event listeners
-    dropzone.addEventListener('click', ()=> fileInput.click());
-    dropzone.addEventListener('dragover', (e)=>{ 
-      e.preventDefault(); 
-      dropzone.classList.add('dragover'); 
-    });
-    dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', (e)=>{ 
-      e.preventDefault(); 
-      dropzone.classList.remove('dragover'); 
-      const f = e.dataTransfer.files?.[0]; 
-      if(f) {
-        fileInput.files = e.dataTransfer.files;
-        handleFile(f);
-      }
+      statusText.textContent = `✅ Loaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      exportBtn.disabled = false;
     });
 
-    fileInput.addEventListener('change', (e)=>{ 
-      const f = e.target.files?.[0]; 
-      if(f) handleFile(f); 
-    });
-    
-    btnClear.addEventListener('click', clearAll);
-    btnExportAllPng.addEventListener('click', ()=> exportAllImages('png'));
-    btnExportAllJpg.addEventListener('click', ()=> exportAllImages('jpeg'));
-    btnExportPdfsZip.addEventListener('click', exportPagesAsZip);
-
-    // Main entry: process uploaded file
-    async function handleFile(file){
+    // Handle Export as ZIP
+    exportBtn.addEventListener("click", async () => {
       try {
-        if (!file || !file.type || !file.type.includes('pdf')) {
-          alert('Please upload a PDF file.');
+        if (!uploadedPdfBytes) {
+          alert("Please upload a PDF first!");
           return;
         }
-        clearAll();
-        setStatus(`Loading ${file.name}...`);
-        setProgress(0.02);
-        originalPdfBytes = await file.arrayBuffer();
-        pdfJsDoc = await pdfjsLib.getDocument({ data: originalPdfBytes }).promise;
-        setStatus(`PDF loaded — ${pdfJsDoc.numPages} pages`);
-        
-        // Sequential render to control memory
-        for (let i=1; i<=pdfJsDoc.numPages; i++){
-          setProgress((i-1)/pdfJsDoc.numPages);
-          await renderAndStorePage(i);
-          refreshCards();
-          await new Promise(r=>setTimeout(r,20));
-        }
-        setProgress(1);
-        setStatus('Ready — reorder pages then export.');
-        
-        // Enable reordering
-        Sortable.create(pagesEl, {
-          animation: 150,
-          ghostClass: 'sortable-ghost',
-          chosenClass: 'sortable-chosen',
-          onEnd: (evt) => {
-            const newOrder = [];
-            pagesEl.querySelectorAll('.page-card').forEach(card => {
-              const pnum = Number(card.dataset.pagenum);
-              const st = pageState.find(s => s.pageNum === pnum);
-              if (st) newOrder.push(st);
-            });
-            pageState = newOrder;
-            refreshCards();
-          }
-        });
-      } catch (err) {
-        console.error('handleFile error', err);
-        setStatus('Failed to load PDF. See console.');
-        alert('Failed to load PDF: ' + (err.message || err));
-      }
-    }
 
-    // Render a page (high-quality canvas), store in pageState
-    async function renderAndStorePage(pageNum){
-      const page = await pdfJsDoc.getPage(pageNum);
-      const EXPORT_SCALE = 2.0;
-      const viewport = page.getViewport({ scale: EXPORT_SCALE });
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0,0,canvas.width, canvas.height);
-      await page.render({ canvasContext: ctx, viewport }).promise;
+        statusText.textContent = "⏳ Creating ZIP file...";
 
-      const thumbUrl = createThumbDataUrl(canvas);
+        const pdfDoc = await PDFDocument.load(uploadedPdfBytes);
+        const totalPages = pdfDoc.getPageCount();
 
-      pageState.push({
-        pageNum,
-        fullCanvas: canvas,
-        rotation: 0,
-        thumbUrl
-      });
-    }
-
-    // Create thumbnail dataURL from a full canvas
-    function createThumbDataUrl(fullCanvas){
-      const THUMB_W = 400;
-      const scale = Math.min(1, THUMB_W / fullCanvas.width);
-      const tcan = document.createElement('canvas');
-      tcan.width = Math.max(1, Math.floor(fullCanvas.width * scale));
-      tcan.height = Math.max(1, Math.floor(fullCanvas.height * scale));
-      const tctx = tcan.getContext('2d');
-      tctx.fillStyle = '#ffffff';
-      tctx.fillRect(0,0,tcan.width,tcan.height);
-      tctx.drawImage(fullCanvas, 0, 0, fullCanvas.width, fullCanvas.height, 0, 0, tcan.width, tcan.height);
-      return tcan.toDataURL('image/png');
-    }
-
-    // Rebuild page cards UI
-    function refreshCards(){
-      pagesEl.innerHTML = '';
-      for (let st of pageState){
-        const card = document.createElement('div');
-        card.className = 'page-card';
-        card.dataset.pagenum = st.pageNum;
-
-        const thumb = document.createElement('img');
-        thumb.className = 'page-thumb';
-        thumb.alt = `Page ${st.pageNum}`;
-        thumb.src = st.thumbUrl;
-
-        const meta = document.createElement('div');
-        meta.className = 'page-meta';
-        meta.innerHTML = `
-          <div class="page-info">
-            <div>Page <strong>${st.pageNum}</strong></div>
-            <div class="small">Rot: <span class="rot">${st.rotation}°</span></div>
-          </div>
-        `;
-        
-        const actions = document.createElement('div');
-        actions.className = 'page-actions';
-        actions.innerHTML = `
-          <button class="icon-btn rotate" title="Rotate 90°">🔄</button>
-          <button class="icon-btn download-img" title="Download as PNG">💾</button>
-          <button class="icon-btn download-pdf" title="Download as PDF">📄</button>
-        `;
-        meta.appendChild(actions);
-
-        card.appendChild(thumb);
-        card.appendChild(meta);
-        pagesEl.appendChild(card);
-
-        // Wire events
-        card.querySelector('.rotate').addEventListener('click', async ()=>{
-          st.rotation = (st.rotation + 90) % 360;
-          await regenerateThumbFromState(st);
-          refreshCards();
-        });
-
-        card.querySelector('.download-img').addEventListener('click', async ()=>{
-          try {
-            const blob = await exportCanvasImage(st, 'png');
-            saveAs(blob, `page-${st.pageNum}.png`);
-          } catch (e){
-            console.error('download image failed', e);
-            alert('Download failed. See console.');
-          }
-        });
-
-        card.querySelector('.download-pdf').addEventListener('click', async ()=>{
-          try {
-            const pdfBlob = await exportPageAsPdf(st);
-            saveAs(pdfBlob, `page-${st.pageNum}.pdf`);
-          } catch (e){
-            console.error('download PDF failed', e);
-            alert('PDF download failed. See console.');
-          }
-        });
-      }
-    }
-
-    // Regenerate thumbnail from state (apply rotation)
-    async function regenerateThumbFromState(st){
-      const full = st.fullCanvas;
-      const rot = st.rotation % 360;
-      const off = document.createElement('canvas');
-      
-      if (rot === 90 || rot === 270) { 
-        off.width = full.height; 
-        off.height = full.width; 
-      } else { 
-        off.width = full.width; 
-        off.height = full.height; 
-      }
-      
-      const octx = off.getContext('2d');
-      octx.fillStyle = '#ffffff'; 
-      octx.fillRect(0,0,off.width, off.height);
-      octx.save();
-      
-      if (rot === 90) {
-        octx.translate(off.width, 0); 
-        octx.rotate(Math.PI/2); 
-        octx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      } else if (rot === 180) {
-        octx.translate(off.width, off.height); 
-        octx.rotate(Math.PI); 
-        octx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      } else if (rot === 270) {
-        octx.translate(0, off.height); 
-        octx.rotate(-Math.PI/2); 
-        octx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      } else {
-        octx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      }
-      octx.restore();
-      
-      st.thumbUrl = createThumbDataUrl(off);
-    }
-
-    // Export canvas as image (respecting rotation)
-    async function exportCanvasImage(st, mime='png'){
-      const full = st.fullCanvas;
-      const rot = st.rotation % 360;
-      let outW = full.width, outH = full.height;
-      
-      if (rot === 90 || rot === 270) { 
-        outW = full.height; 
-        outH = full.width; 
-      }
-      
-      const out = document.createElement('canvas');
-      out.width = outW; 
-      out.height = outH;
-      const ctx = out.getContext('2d');
-      ctx.fillStyle = '#ffffff'; 
-      ctx.fillRect(0,0,outW,outH);
-      ctx.save();
-      
-      if (rot === 90) {
-        ctx.translate(outW, 0); 
-        ctx.rotate(Math.PI/2); 
-        ctx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      } else if (rot === 180) {
-        ctx.translate(outW, outH); 
-        ctx.rotate(Math.PI); 
-        ctx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      } else if (rot === 270) {
-        ctx.translate(0, outH); 
-        ctx.rotate(-Math.PI/2); 
-        ctx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      } else {
-        ctx.drawImage(full, 0, 0, full.width, full.height, 0, 0, full.width, full.height);
-      }
-      ctx.restore();
-      
-      return new Promise(resolve => 
-        out.toBlob(b => resolve(b), `image/${mime}`, mime === 'jpeg' ? 0.92 : 0.95)
-      );
-    }
-
-// Export single page as PDF
-async function exportPageAsPdf(st){
-  const blob = await exportCanvasImage(st, 'png');
-  const arr = await blob.arrayBuffer();
-  const pdfDoc = await pdfLib.PDFDocument.create();
-  const img = await pdfDoc.embedPng(arr);
-  const { width, height } = img.scale(1);
-  const page = pdfDoc.addPage([width, height]);
-  page.drawImage(img, { x: 0, y: 0, width, height });
-  const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: 'application/pdf' });
-}
-
-
-    // Export all images (current order)
-    async function exportAllImages(format='png'){
-      if (!pageState.length) { 
-        alert('No pages to export'); 
-        return; 
-      }
-      setStatus('Exporting images...');
-      setProgress(0);
-      
-      for (let i=0; i<pageState.length; i++){
-        const st = pageState[i];
-        const blob = await exportCanvasImage(st, format === 'jpg' ? 'jpeg' : format);
-        const ext = format === 'jpg' ? 'jpg' : format;
-        saveAs(blob, `page-${i+1}.${ext}`);
-        setProgress((i+1)/pageState.length);
-        await new Promise(r=>setTimeout(r,20));
-      }
-      setStatus('Images exported.');
-      setProgress(1);
-    }
-
-    // Export all pages as individual PDFs in a ZIP file
-    async function exportPagesAsZip(){
-      if (!pageState.length) { 
-        alert('No pages to export'); 
-        return; 
-      }
-      
-      setStatus('Creating PDF ZIP file...');
-      setProgress(0);
-      
-      try {
         const zip = new JSZip();
-        
-        for (let i=0; i<pageState.length; i++){
-          const st = pageState[i];
-          
-          // Create individual PDF using pdf-lib
-          const blob = await exportCanvasImage(st, 'png');
-          const imageBytes = await blob.arrayBuffer();
-          const pdfDoc = await PDFLib.PDFDocument.create();
-          const img = await pdfDoc.embedPng(imageBytes);
-          const { width, height } = img.scale(1);
-          const page = pdfDoc.addPage([width, height]);
-          page.drawImage(img, { x: 0, y: 0, width, height });
-          const pdfBytes = await pdfDoc.save();
-          
-          // Add to ZIP with proper binary handling
-          zip.file(`page-${i+1}.pdf`, pdfBytes, {binary: true});
-          setProgress((i+1)/pageState.length * 0.8);
-          await new Promise(r=>setTimeout(r,50)); // Longer delay for stability
-        }
-        
-        setStatus('Generating ZIP file...');
-        setProgress(0.9);
-        
-        const zipBlob = await zip.generateAsync({
-          type: "blob",
-          compression: "DEFLATE",
-          compressionOptions: {
-            level: 6
-          }
-        });
-        
-        const filename = `pdf-pages-${new Date().toISOString().slice(0,10)}.zip`;
-        saveAs(zipBlob, filename);
-        
-        setStatus('ZIP file ready for download!');
-        setProgress(1);
-        
-      } catch (error) {
-        console.error('ZIP creation failed:', error);
-        setStatus('ZIP creation failed. Check console for details.');
-        alert('Failed to create ZIP file: ' + error.message);
-      }
-    }
 
-    // Clear everything
-    function clearAll(){
-      pageState.forEach(st => { 
-        if (st.thumbUrl && st.thumbUrl.startsWith('blob:')) 
-          URL.revokeObjectURL(st.thumbUrl); 
-      });
-      pageState = [];
-      pagesEl.innerHTML = '';
-      pdfJsDoc = null;
-      originalPdfBytes = null;
-      setStatus('No file loaded.');
-      setProgress(0);
-    }
+        for (let i = 0; i < totalPages; i++) {
+          const newPdf = await PDFDocument.create();
+          const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+          newPdf.addPage(copiedPage);
+
+          const pdfBytes = await newPdf.save();
+          zip.file(`page_${i + 1}.pdf`, pdfBytes);
+
+          statusText.textContent = `📄 Processing page ${i + 1} of ${totalPages}...`;
+        }
+
+        const content = await zip.generateAsync({ type: "blob" });
+        saveAs(content, "split_pages.zip");
+
+        statusText.textContent = "✅ ZIP created successfully! Download started.";
+      } catch (err) {
+        console.error("❌ ZIP creation failed:", err);
+        statusText.textContent = "❌ ZIP creation failed. Check console for details.";
+      }
+    });
   </script>
 </body>
 </html>
