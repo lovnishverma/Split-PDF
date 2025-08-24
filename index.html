@@ -617,24 +617,50 @@
       setStatus('Creating PDF ZIP file...');
       setProgress(0);
       
-      const zip = new JSZip();
-      
-      for (let i=0; i<pageState.length; i++){
-        const st = pageState[i];
-        const pdfBlob = await exportPageAsPdf(st);
-        const pdfBytes = await pdfBlob.arrayBuffer();
-        zip.file(`page-${i+1}.pdf`, pdfBytes);
-        setProgress((i+1)/pageState.length * 0.9);
-        await new Promise(r=>setTimeout(r,20));
+      try {
+        const zip = new JSZip();
+        
+        for (let i=0; i<pageState.length; i++){
+          const st = pageState[i];
+          
+          // Create individual PDF using pdf-lib
+          const blob = await exportCanvasImage(st, 'png');
+          const imageBytes = await blob.arrayBuffer();
+          const pdfDoc = await PDFLib.PDFDocument.create();
+          const img = await pdfDoc.embedPng(imageBytes);
+          const { width, height } = img.scale(1);
+          const page = pdfDoc.addPage([width, height]);
+          page.drawImage(img, { x: 0, y: 0, width, height });
+          const pdfBytes = await pdfDoc.save();
+          
+          // Add to ZIP with proper binary handling
+          zip.file(`page-${i+1}.pdf`, pdfBytes, {binary: true});
+          setProgress((i+1)/pageState.length * 0.8);
+          await new Promise(r=>setTimeout(r,50)); // Longer delay for stability
+        }
+        
+        setStatus('Generating ZIP file...');
+        setProgress(0.9);
+        
+        const zipBlob = await zip.generateAsync({
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: {
+            level: 6
+          }
+        });
+        
+        const filename = `pdf-pages-${new Date().toISOString().slice(0,10)}.zip`;
+        saveAs(zipBlob, filename);
+        
+        setStatus('ZIP file ready for download!');
+        setProgress(1);
+        
+      } catch (error) {
+        console.error('ZIP creation failed:', error);
+        setStatus('ZIP creation failed. Check console for details.');
+        alert('Failed to create ZIP file: ' + error.message);
       }
-      
-      setStatus('Generating ZIP file...');
-      const zipBlob = await zip.generateAsync({type: "blob"});
-      const filename = `pdf-pages-${new Date().toISOString().slice(0,10)}.zip`;
-      saveAs(zipBlob, filename);
-      
-      setStatus('ZIP file ready for download.');
-      setProgress(1);
     }
 
     // Clear everything
