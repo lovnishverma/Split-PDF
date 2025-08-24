@@ -32,7 +32,7 @@
       border-radius: 20px;
       padding: 40px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-      max-width: 500px;
+      max-width: 520px;
       width: 100%;
       text-align: center;
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -40,28 +40,28 @@
     
     h1 {
       color: #2c3e50;
-      margin-bottom: 30px;
+      margin-bottom: 10px;
       font-size: 2.2rem;
       font-weight: 300;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
-    .upload-section {
-      margin: 30px 0;
-      position: relative;
+    p.subtitle {
+      color: #7f8c8d;
+      margin-bottom: 30px;
     }
     
+    .upload-section {
+      margin: 20px 0;
+    }
     .file-input-wrapper {
       position: relative;
       display: inline-block;
       cursor: pointer;
       transition: transform 0.2s ease;
     }
-    
     .file-input-wrapper:hover {
       transform: translateY(-2px);
     }
-    
     #pdf-upload {
       position: absolute;
       opacity: 0;
@@ -69,7 +69,6 @@
       height: 100%;
       cursor: pointer;
     }
-    
     .file-input-label {
       display: inline-block;
       padding: 15px 30px;
@@ -78,11 +77,9 @@
       border-radius: 12px;
       font-weight: 500;
       font-size: 16px;
-      border: 2px solid transparent;
       transition: all 0.3s ease;
       cursor: pointer;
     }
-    
     .file-input-label:hover {
       background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
       box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
@@ -96,28 +93,43 @@
       border-left: 4px solid #2ecc71;
       display: none;
     }
-    
     .pdf-info.show {
       display: block;
       animation: fadeIn 0.5s ease;
     }
-    
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    
     .pdf-info h3 {
       color: #27ae60;
       margin-bottom: 8px;
       font-size: 1.1rem;
     }
-    
     .pdf-details {
       color: #2c3e50;
       font-size: 14px;
     }
-    
+
+    .options {
+      margin: 20px 0;
+      text-align: left;
+      font-size: 14px;
+    }
+    .options label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .options select, .options input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
     button {
       padding: 15px 35px;
       font-size: 16px;
@@ -133,26 +145,18 @@
       position: relative;
       overflow: hidden;
     }
-    
     button:hover:not(:disabled) {
       background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
       box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
       transform: translateY(-2px);
     }
-    
     button:disabled {
       background: #bdc3c7;
       cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
     }
-    
-    button:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    
+
     #status {
-      margin-top: 25px;
+      margin-top: 20px;
       font-weight: 500;
       color: #2c3e50;
       min-height: 24px;
@@ -161,7 +165,6 @@
       justify-content: center;
       gap: 8px;
     }
-    
     .progress-bar {
       width: 100%;
       height: 6px;
@@ -171,7 +174,6 @@
       overflow: hidden;
       display: none;
     }
-    
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, #2ecc71, #27ae60);
@@ -179,7 +181,6 @@
       width: 0%;
       transition: width 0.3s ease;
     }
-    
     .spinner {
       width: 20px;
       height: 20px;
@@ -189,12 +190,11 @@
       animation: spin 1s linear infinite;
       display: none;
     }
-    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    
+
     .error {
       color: #e74c3c;
       background: rgba(231, 76, 60, 0.1);
@@ -203,7 +203,6 @@
       padding: 12px;
       margin-top: 15px;
     }
-    
     .success {
       color: #27ae60;
       background: rgba(46, 204, 113, 0.1);
@@ -212,35 +211,17 @@
       padding: 12px;
       margin-top: 15px;
     }
-    
-    @media (max-width: 480px) {
-      .container {
-        padding: 25px;
-        margin: 10px;
-      }
-      
-      h1 {
-        font-size: 1.8rem;
-      }
-      
-      button, .file-input-label {
-        padding: 12px 25px;
-        font-size: 14px;
-      }
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>📄 PDF Splitter Tool</h1>
-    <p style="color: #7f8c8d; margin-bottom: 30px;">Split your PDF into individual pages and download as ZIP</p>
+    <p class="subtitle">Split your PDF into individual pages and download as ZIP</p>
     
     <div class="upload-section">
       <div class="file-input-wrapper">
         <input type="file" id="pdf-upload" accept="application/pdf" />
-        <div class="file-input-label">
-          📁 Choose PDF File
-        </div>
+        <div class="file-input-label">📁 Choose PDF File</div>
       </div>
     </div>
     
@@ -248,14 +229,26 @@
       <h3>📄 PDF Loaded Successfully</h3>
       <div class="pdf-details" id="pdf-details"></div>
     </div>
+
+    <div class="options">
+      <label for="rotate">Rotate Pages:</label>
+      <select id="rotate">
+        <option value="0">0° (No rotation)</option>
+        <option value="90">90°</option>
+        <option value="180">180°</option>
+        <option value="270">270°</option>
+      </select>
+
+      <label for="pattern">File Name Pattern:</label>
+      <input type="text" id="pattern" value="page_##.pdf" />
+      <small style="color:#7f8c8d;">Use <b>##</b> as page number placeholder (e.g. certificate_##.pdf → certificate_01.pdf)</small>
+    </div>
     
     <div class="progress-bar" id="progress-bar">
       <div class="progress-fill" id="progress-fill"></div>
     </div>
     
-    <button id="export-zip" disabled>
-      📦 Export Pages as ZIP
-    </button>
+    <button id="export-zip" disabled>📦 Export Pages as ZIP</button>
     
     <div id="status">
       <div class="spinner" id="spinner"></div>
@@ -269,193 +262,125 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   
   <script>
-    const { PDFDocument } = PDFLib;
+    const { PDFDocument, degrees } = PDFLib;
     const uploadInput = document.getElementById("pdf-upload");
     const exportBtn = document.getElementById("export-zip");
     const statusText = document.getElementById("status-text");
-    const statusDiv = document.getElementById("status");
     const spinner = document.getElementById("spinner");
     const pdfInfo = document.getElementById("pdf-info");
     const pdfDetails = document.getElementById("pdf-details");
     const progressBar = document.getElementById("progress-bar");
     const progressFill = document.getElementById("progress-fill");
-    
+    const rotateSelect = document.getElementById("rotate");
+    const patternInput = document.getElementById("pattern");
+
     let uploadedPdfBytes = null;
     let pdfFileName = "";
     let totalPages = 0;
 
-    function showSpinner() {
-      spinner.style.display = "block";
+    function showSpinner(show) {
+      spinner.style.display = show ? "block" : "none";
     }
-
-    function hideSpinner() {
-      spinner.style.display = "none";
-    }
-
     function updateProgress(current, total) {
       const percentage = (current / total) * 100;
       progressFill.style.width = percentage + "%";
       progressBar.style.display = "block";
     }
-
-    function hideProgress() {
+    function resetProgress() {
       progressBar.style.display = "none";
       progressFill.style.width = "0%";
     }
-
-    function showError(message) {
-      statusDiv.className = "error";
+    function showStatus(message, type = "", spinning = false) {
       statusText.textContent = message;
-      hideSpinner();
-      hideProgress();
-    }
-
-    function showSuccess(message) {
-      statusDiv.className = "success";
-      statusText.textContent = message;
-      hideSpinner();
-      hideProgress();
-    }
-
-    function showStatus(message, showSpinnerIcon = false) {
-      statusDiv.className = "";
-      statusText.textContent = message;
-      if (showSpinnerIcon) {
-        showSpinner();
-      } else {
-        hideSpinner();
-      }
+      showSpinner(spinning);
+      statusText.parentElement.className = type || "";
     }
 
     // Handle PDF Upload
     uploadInput.addEventListener("change", async (event) => {
       const file = event.target.files[0];
       if (!file) return;
-
-      // Validate file type
       if (file.type !== "application/pdf") {
-        showError("Please select a valid PDF file.");
+        showStatus("❌ Please select a valid PDF file", "error");
         return;
       }
-
-      // Validate file size (max 50MB)
-      const maxSize = 50 * 1024 * 1024; // 50MB
-      if (file.size > maxSize) {
-        showError("File is too large. Please select a PDF under 50MB.");
+      if (file.size > 50 * 1024 * 1024) {
+        showStatus("❌ File too large (max 50MB)", "error");
         return;
       }
-
       try {
-        showStatus("📥 Loading PDF...", true);
-        
+        showStatus("📥 Loading PDF...", "", true);
         uploadedPdfBytes = await file.arrayBuffer();
-        pdfFileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-        
-        // Load PDF to get page count
+        pdfFileName = file.name.replace(/\.[^/.]+$/, "");
         const pdfDoc = await PDFDocument.load(uploadedPdfBytes);
         totalPages = pdfDoc.getPageCount();
-        
-        // Show PDF info
         pdfDetails.innerHTML = `
           <strong>File:</strong> ${file.name}<br>
           <strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
           <strong>Pages:</strong> ${totalPages}
         `;
         pdfInfo.classList.add("show");
-        
         exportBtn.disabled = false;
-        showStatus(`✅ PDF loaded successfully with ${totalPages} pages`);
-        
-      } catch (error) {
-        console.error("Error loading PDF:", error);
-        showError("Failed to load PDF. Please ensure it's a valid PDF file.");
+        showStatus(`✅ Loaded successfully with ${totalPages} pages`, "success");
+      } catch (err) {
+        console.error(err);
+        showStatus("❌ Failed to load PDF", "error");
         uploadedPdfBytes = null;
-        pdfInfo.classList.remove("show");
         exportBtn.disabled = true;
+        pdfInfo.classList.remove("show");
       }
     });
 
     // Handle Export as ZIP
     exportBtn.addEventListener("click", async () => {
       if (!uploadedPdfBytes) {
-        showError("Please upload a PDF first!");
+        showStatus("❌ Please upload a PDF first!", "error");
         return;
       }
-
       try {
-        showStatus("⏳ Preparing to split PDF...", true);
-        
+        showStatus("⏳ Splitting PDF...", "", true);
         const pdfDoc = await PDFDocument.load(uploadedPdfBytes);
         const zip = new JSZip();
+        const rotation = parseInt(rotateSelect.value);
+        const pattern = patternInput.value.trim() || "page_##.pdf";
         
         for (let i = 0; i < totalPages; i++) {
-          showStatus(`📄 Processing page ${i + 1} of ${totalPages}...`, true);
           updateProgress(i, totalPages);
-          
-          // Create new PDF with single page
           const newPdf = await PDFDocument.create();
           const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+          if (rotation !== 0) copiedPage.setRotation(degrees(rotation));
           newPdf.addPage(copiedPage);
-          
-          // Save as PDF bytes
           const pdfBytes = await newPdf.save();
-          const pageNumber = String(i + 1).padStart(3, '0'); // Zero-pad for proper sorting
-          zip.file(`${pdfFileName}_page_${pageNumber}.pdf`, pdfBytes);
-          
-          // Small delay to prevent UI freezing
-          if (i % 5 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 10));
-          }
+          const pageNumber = String(i + 1).padStart(2, '0');
+          let filename = pattern.replace("##", pageNumber);
+          if (!filename.toLowerCase().endsWith(".pdf")) filename += ".pdf";
+          zip.file(filename, pdfBytes);
+          if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
         }
-
-        showStatus("📦 Creating ZIP archive...", true);
         updateProgress(totalPages, totalPages);
-        
-        const content = await zip.generateAsync({ 
-          type: "blob",
-          compression: "DEFLATE",
-          compressionOptions: { level: 6 }
-        });
-        
+        showStatus("📦 Creating ZIP archive...", "", true);
+        const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
         const zipFileName = `${pdfFileName}_split_pages.zip`;
         saveAs(content, zipFileName);
-        
-        showSuccess(`✅ Success! Downloaded ${totalPages} pages as "${zipFileName}"`);
-        
-      } catch (error) {
-        console.error("Error creating ZIP:", error);
-        showError("Failed to create ZIP file. Please try again.");
+        showStatus(`✅ Success! Downloaded ${totalPages} pages as "${zipFileName}"`, "success");
+        resetProgress();
+      } catch (err) {
+        console.error(err);
+        showStatus("❌ Failed to create ZIP", "error");
       }
     });
 
-    // Handle file input label click
-    document.querySelector('.file-input-label').addEventListener('click', () => {
-      uploadInput.click();
-    });
-
-    // Drag and drop functionality
+    // Custom label click
+    document.querySelector('.file-input-label').addEventListener('click', () => uploadInput.click());
+    // Drag & drop
     const container = document.querySelector('.container');
-    
-    container.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      container.style.transform = 'scale(1.02)';
-      container.style.boxShadow = '0 25px 50px rgba(102, 126, 234, 0.3)';
-    });
-
-    container.addEventListener('dragleave', (e) => {
+    container.addEventListener('dragover', e => { e.preventDefault(); container.style.transform = 'scale(1.02)'; });
+    container.addEventListener('dragleave', e => { e.preventDefault(); container.style.transform = 'scale(1)'; });
+    container.addEventListener('drop', e => {
       e.preventDefault();
       container.style.transform = 'scale(1)';
-      container.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.1)';
-    });
-
-    container.addEventListener('drop', (e) => {
-      e.preventDefault();
-      container.style.transform = 'scale(1)';
-      container.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.1)';
-      
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        uploadInput.files = files;
+      if (e.dataTransfer.files.length > 0) {
+        uploadInput.files = e.dataTransfer.files;
         uploadInput.dispatchEvent(new Event('change'));
       }
     });
