@@ -1,31 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Splitter & Export Tool</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PDF Split & Edit Tool</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- Libraries (order matters) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@2.22.0/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
 </head>
 <body>
-  <h1>📄 PDF Splitter & Export Tool</h1>
+  <header>
+    <h1>PDF Split & Edit Tool</h1>
+    <p class="subtitle">Upload a PDF → reorder, rotate, crop → export PNG / JPG / Edited PDF</p>
+  </header>
 
-  <!-- File Upload -->
-  <input type="file" id="pdf-upload" accept="application/pdf">
+  <main class="container">
+    <section class="uploader">
+      <label id="dropzone" class="dropzone">📁 Click or drop a PDF here</label>
+      <input id="fileInput" type="file" accept="application/pdf" hidden />
+      <div class="toolbar">
+        <button id="btnExportAllPng" class="btn">Export All → PNG</button>
+        <button id="btnExportAllJpg" class="btn">Export All → JPG</button>
+        <button id="btnExportPdf" class="btn">Download Edited PDF</button>
+        <button id="btnClear" class="btn muted">Clear</button>
+      </div>
+      <div id="status" class="status">No file loaded.</div>
+      <div class="progress"><div id="progressBar" class="bar"></div></div>
+    </section>
 
-  <!-- Controls -->
-  <div id="controls">
-    <button id="download-zip">Download All as ZIP</button>
-  </div>
+    <section id="pages" class="pages" aria-live="polite"></section>
+  </main>
 
-  <!-- Pages Preview -->
-  <div id="pages-container"></div>
-
-  <!-- Libraries via CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-  <!-- Your Script -->
   <script src="script.js"></script>
 </body>
 </html>
