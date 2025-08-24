@@ -1,0 +1,92 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f9;
+  margin: 20px;
+  color: #333;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dropzone {
+  border: 2px dashed #888;
+  padding: 30px;
+  text-align: center;
+  margin-bottom: 20px;
+  cursor: pointer;
+  background: #fff;
+  border-radius: 8px;
+  transition: 0.3s;
+}
+
+.dropzone.dragover {
+  background: #e0f7fa;
+  border-color: #26c6da;
+}
+
+.toolbar {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.toolbar button {
+  margin: 5px;
+  padding: 8px 16px;
+  background: #26c6da;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.toolbar button:hover {
+  background: #008ba3;
+}
+
+.progress {
+  background: #ddd;
+  height: 8px;
+  width: 100%;
+  margin: 10px 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: #26c6da;
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+#statusLine {
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin: 8px;
+  border-radius: 6px;
+  background: #fff;
+  width: 200px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.page-card canvas {
+  width: 100%;
+  border: 1px solid #ddd;
+  margin-bottom: 10px;
+}
