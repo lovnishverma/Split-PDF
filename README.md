@@ -34,7 +34,7 @@ No backend required – everything runs locally in the browser! 🚀
    ```bash
    git clone https://github.com/your-username/pdf-splitter-tool.git
    cd pdf-splitter-tool
-````
+   ````
 
 2. Open `index.html` in your **browser** (no server required).
 3. Upload a PDF file using the **"Choose PDF File"** button (or drag & drop).
@@ -92,6 +92,3 @@ MIT License © 2025 – Free to use and modify.
 * [JSZip](https://stuk.github.io/jszip/) – ZIP generation
 * [FileSaver.js](https://github.com/eligrey/FileSaver.js/) – Client-side file saving
 
-
-Do you want me to also include a **GitHub Actions workflow** so that every push automatically deploys this tool to **GitHub Pages**?
-```
