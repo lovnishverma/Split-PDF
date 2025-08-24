@@ -573,18 +573,19 @@
       );
     }
 
-    // Export single page as PDF
-    async function exportPageAsPdf(st){
-      const blob = await exportCanvasImage(st, 'png');
-      const arr = await blob.arrayBuffer();
-      const pdfDoc = await PDFLib.PDFDocument.create();
-      const img = await pdfDoc.embedPng(arr);
-      const { width, height } = img.scale(1);
-      const page = pdfDoc.addPage([width, height]);
-      page.drawImage(img, { x: 0, y: 0, width, height });
-      const pdfBytes = await pdfDoc.save();
-      return new Blob([pdfBytes], { type: 'application/pdf' });
-    }
+// Export single page as PDF
+async function exportPageAsPdf(st){
+  const blob = await exportCanvasImage(st, 'png');
+  const arr = await blob.arrayBuffer();
+  const pdfDoc = await pdfLib.PDFDocument.create();  // fixed here
+  const img = await pdfDoc.embedPng(arr);
+  const { width, height } = img.scale(1);
+  const page = pdfDoc.addPage([width, height]);
+  page.drawImage(img, { x: 0, y: 0, width, height });
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
+}
+
 
     // Export all images (current order)
     async function exportAllImages(format='png'){
