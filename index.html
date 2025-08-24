@@ -3,113 +3,460 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link
+      rel="shortcut icon"
+      type="image/x-icon"
+      href="https://cdn.glitch.global/12392ae7-4a85-40e3-8823-99588eabfbd2/Logo%20(512%20x%20512%20px).png?v=1709289476595"
+    />
   <title>📄 PDF Splitter & Export Tool</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f4f6f9;
-      padding: 30px;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
     h1 {
       color: #2c3e50;
+      margin-bottom: 30px;
+      font-size: 2.2rem;
+      font-weight: 300;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
+    
+    .upload-section {
+      margin: 30px 0;
+      position: relative;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      display: inline-block;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    
+    .file-input-wrapper:hover {
+      transform: translateY(-2px);
+    }
+    
     #pdf-upload {
-      margin: 20px 0;
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
     }
-    #status {
-      margin-top: 20px;
-      font-weight: bold;
-      color: #007bff;
-    }
-    button {
-      margin: 10px;
-      padding: 10px 20px;
+    
+    .file-input-label {
+      display: inline-block;
+      padding: 15px 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      font-weight: 500;
       font-size: 16px;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .file-input-label:hover {
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .pdf-info {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(46, 204, 113, 0.1);
+      border-radius: 10px;
+      border-left: 4px solid #2ecc71;
+      display: none;
+    }
+    
+    .pdf-info.show {
+      display: block;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .pdf-info h3 {
+      color: #27ae60;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+    }
+    
+    .pdf-details {
+      color: #2c3e50;
+      font-size: 14px;
+    }
+    
+    button {
+      padding: 15px 35px;
+      font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
       border: none;
-      border-radius: 6px;
-      background: #28a745;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
       color: white;
-      transition: background 0.3s;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
     }
+    
     button:hover:not(:disabled) {
-      background: #218838;
+      background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+      box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+      transform: translateY(-2px);
     }
+    
     button:disabled {
-      background: #ccc;
+      background: #bdc3c7;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    
+    #status {
+      margin-top: 25px;
+      font-weight: 500;
+      color: #2c3e50;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(189, 195, 199, 0.3);
+      border-radius: 3px;
+      margin: 15px 0;
+      overflow: hidden;
+      display: none;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2ecc71, #27ae60);
+      border-radius: 3px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: none;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error {
+      color: #e74c3c;
+      background: rgba(231, 76, 60, 0.1);
+      border: 1px solid rgba(231, 76, 60, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+    }
+    
+    .success {
+      color: #27ae60;
+      background: rgba(46, 204, 113, 0.1);
+      border: 1px solid rgba(46, 204, 113, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 15px;
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 25px;
+        margin: 10px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      button, .file-input-label {
+        padding: 12px 25px;
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>📄 PDF Splitter & Export Tool</h1>
+  <div class="container">
+    <h1>📄 PDF Splitter Tool</h1>
+    <p style="color: #7f8c8d; margin-bottom: 30px;">Split your PDF into individual pages and download as ZIP</p>
+    
+    <div class="upload-section">
+      <div class="file-input-wrapper">
+        <input type="file" id="pdf-upload" accept="application/pdf" />
+        <div class="file-input-label">
+          📁 Choose PDF File
+        </div>
+      </div>
+    </div>
+    
+    <div class="pdf-info" id="pdf-info">
+      <h3>📄 PDF Loaded Successfully</h3>
+      <div class="pdf-details" id="pdf-details"></div>
+    </div>
+    
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    
+    <button id="export-zip" disabled>
+      📦 Export Pages as ZIP
+    </button>
+    
+    <div id="status">
+      <div class="spinner" id="spinner"></div>
+      <span id="status-text">Ready to split your PDF</span>
+    </div>
+  </div>
 
-  <input type="file" id="pdf-upload" accept="application/pdf" />
-  <br />
-  <button id="export-zip" disabled>Export Pages as ZIP</button>
-  <p id="status">Upload a PDF to begin.</p>
-
-  <!-- ✅ Official pdf-lib -->
+  <!-- Libraries -->
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-  <!-- ✅ JSZip -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-  <!-- ✅ FileSaver -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
+  
   <script>
-    const { PDFDocument } = PDFLib; // ✅ safe reference
+    const { PDFDocument } = PDFLib;
     const uploadInput = document.getElementById("pdf-upload");
     const exportBtn = document.getElementById("export-zip");
-    const statusText = document.getElementById("status");
-
+    const statusText = document.getElementById("status-text");
+    const statusDiv = document.getElementById("status");
+    const spinner = document.getElementById("spinner");
+    const pdfInfo = document.getElementById("pdf-info");
+    const pdfDetails = document.getElementById("pdf-details");
+    const progressBar = document.getElementById("progress-bar");
+    const progressFill = document.getElementById("progress-fill");
+    
     let uploadedPdfBytes = null;
+    let pdfFileName = "";
+    let totalPages = 0;
+
+    function showSpinner() {
+      spinner.style.display = "block";
+    }
+
+    function hideSpinner() {
+      spinner.style.display = "none";
+    }
+
+    function updateProgress(current, total) {
+      const percentage = (current / total) * 100;
+      progressFill.style.width = percentage + "%";
+      progressBar.style.display = "block";
+    }
+
+    function hideProgress() {
+      progressBar.style.display = "none";
+      progressFill.style.width = "0%";
+    }
+
+    function showError(message) {
+      statusDiv.className = "error";
+      statusText.textContent = message;
+      hideSpinner();
+      hideProgress();
+    }
+
+    function showSuccess(message) {
+      statusDiv.className = "success";
+      statusText.textContent = message;
+      hideSpinner();
+      hideProgress();
+    }
+
+    function showStatus(message, showSpinnerIcon = false) {
+      statusDiv.className = "";
+      statusText.textContent = message;
+      if (showSpinnerIcon) {
+        showSpinner();
+      } else {
+        hideSpinner();
+      }
+    }
 
     // Handle PDF Upload
     uploadInput.addEventListener("change", async (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
-      statusText.textContent = "📥 Reading PDF...";
-      uploadedPdfBytes = await file.arrayBuffer();
+      // Validate file type
+      if (file.type !== "application/pdf") {
+        showError("Please select a valid PDF file.");
+        return;
+      }
 
-      statusText.textContent = `✅ Loaded: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-      exportBtn.disabled = false;
+      // Validate file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        showError("File is too large. Please select a PDF under 50MB.");
+        return;
+      }
+
+      try {
+        showStatus("📥 Loading PDF...", true);
+        
+        uploadedPdfBytes = await file.arrayBuffer();
+        pdfFileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+        
+        // Load PDF to get page count
+        const pdfDoc = await PDFDocument.load(uploadedPdfBytes);
+        totalPages = pdfDoc.getPageCount();
+        
+        // Show PDF info
+        pdfDetails.innerHTML = `
+          <strong>File:</strong> ${file.name}<br>
+          <strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+          <strong>Pages:</strong> ${totalPages}
+        `;
+        pdfInfo.classList.add("show");
+        
+        exportBtn.disabled = false;
+        showStatus(`✅ PDF loaded successfully with ${totalPages} pages`);
+        
+      } catch (error) {
+        console.error("Error loading PDF:", error);
+        showError("Failed to load PDF. Please ensure it's a valid PDF file.");
+        uploadedPdfBytes = null;
+        pdfInfo.classList.remove("show");
+        exportBtn.disabled = true;
+      }
     });
 
     // Handle Export as ZIP
     exportBtn.addEventListener("click", async () => {
+      if (!uploadedPdfBytes) {
+        showError("Please upload a PDF first!");
+        return;
+      }
+
       try {
-        if (!uploadedPdfBytes) {
-          alert("Please upload a PDF first!");
-          return;
-        }
-
-        statusText.textContent = "⏳ Creating ZIP file...";
-
+        showStatus("⏳ Preparing to split PDF...", true);
+        
         const pdfDoc = await PDFDocument.load(uploadedPdfBytes);
-        const totalPages = pdfDoc.getPageCount();
-
         const zip = new JSZip();
-
+        
         for (let i = 0; i < totalPages; i++) {
+          showStatus(`📄 Processing page ${i + 1} of ${totalPages}...`, true);
+          updateProgress(i, totalPages);
+          
+          // Create new PDF with single page
           const newPdf = await PDFDocument.create();
           const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
           newPdf.addPage(copiedPage);
-
+          
+          // Save as PDF bytes
           const pdfBytes = await newPdf.save();
-          zip.file(`page_${i + 1}.pdf`, pdfBytes);
-
-          statusText.textContent = `📄 Processing page ${i + 1} of ${totalPages}...`;
+          const pageNumber = String(i + 1).padStart(3, '0'); // Zero-pad for proper sorting
+          zip.file(`${pdfFileName}_page_${pageNumber}.pdf`, pdfBytes);
+          
+          // Small delay to prevent UI freezing
+          if (i % 5 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
         }
 
-        const content = await zip.generateAsync({ type: "blob" });
-        saveAs(content, "split_pages.zip");
+        showStatus("📦 Creating ZIP archive...", true);
+        updateProgress(totalPages, totalPages);
+        
+        const content = await zip.generateAsync({ 
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 }
+        });
+        
+        const zipFileName = `${pdfFileName}_split_pages.zip`;
+        saveAs(content, zipFileName);
+        
+        showSuccess(`✅ Success! Downloaded ${totalPages} pages as "${zipFileName}"`);
+        
+      } catch (error) {
+        console.error("Error creating ZIP:", error);
+        showError("Failed to create ZIP file. Please try again.");
+      }
+    });
 
-        statusText.textContent = "✅ ZIP created successfully! Download started.";
-      } catch (err) {
-        console.error("❌ ZIP creation failed:", err);
-        statusText.textContent = "❌ ZIP creation failed. Check console for details.";
+    // Handle file input label click
+    document.querySelector('.file-input-label').addEventListener('click', () => {
+      uploadInput.click();
+    });
+
+    // Drag and drop functionality
+    const container = document.querySelector('.container');
+    
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      container.style.transform = 'scale(1.02)';
+      container.style.boxShadow = '0 25px 50px rgba(102, 126, 234, 0.3)';
+    });
+
+    container.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      container.style.transform = 'scale(1)';
+      container.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.1)';
+    });
+
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      container.style.transform = 'scale(1)';
+      container.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.1)';
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        uploadInput.files = files;
+        uploadInput.dispatchEvent(new Event('change'));
       }
     });
   </script>
