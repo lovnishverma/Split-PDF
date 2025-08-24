@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Split PDF — Pages to Separate PDFs (Client-side)</title>
+<style>
+  :root{--bg:#0b1220;--card:#0f172a;--muted:#9aa6b2;--text:#e6eef6;--accent:#38bdf8}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,#07101a,#071822);color:var(--text);font-family:Inter,Segoe UI,Roboto,system-ui,Arial}
+  .wrap{max-width:1100px;margin:28px auto;padding:20px}
+  h1{margin:0 0 6px;font-size:1.6rem}
+  p.lead{margin:0 0 18px;color:var(--muted)}
+  .uploader{display:flex;gap:12px;align-items:center}
+  .drop{flex:1;border:2px dashed #1f2a36;border-radius:12px;padding:18px;background:var(--card);min-height:110px;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer}
+  .btn{background:var(--accent);color:#02151c;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+  input[type=file]{display:none}
+  .controls{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(200px,1fr));gap:14px;margin-top:18px}
+  .card{background:linear-gradient(180deg,#071826,#08131c);border:1px solid #13303f;padding:12px;border-radius:12px}
+  .thumb{width:100%;height:260px;display:block;background:#081216;border-radius:8px;object-fit:contain}
+  .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .small{font-size:0.9rem;color:var(--muted)}
+  .actions{display:flex;gap:8px}
+  .pill{padding:6px 8px;border-radius:999px;background:#071a22;border:1px solid #123241;color:var(--muted)}
+  footer{margin-top:22px;color:var(--muted);font-size:0.9rem}
+  .progress{height:8px;background:#0b1720;border-radius:999px;overflow:hidden;margin-top:10px}
+  .bar{height:100%;background:linear-gradient(90deg,#38bdf8,#22c1c4);width:0%}
+  .note{margin-top:8px;color:var(--muted);font-size:0.9rem}
+</style>
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
+<!-- pdf-lib -->
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@2.22.0/dist/pdf-lib.min.js"></script>
+<!-- JSZip & FileSaver -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>Split PDF — Export pages as separate PDF files</h1>
+  <p class="lead">Upload a PDF, preview pages, download single pages as PDFs or export all pages as separate PDFs in a ZIP. Everything runs in your browser.</p>
+
+  <div class="uploader">
+    <label class="drop" id="dropzone">
+      <div style="text-align:center">
+        <strong id="dropText">Click or drop a PDF here</strong>
+        <div class="note">Supported: .pdf — Drag & drop or use the file picker</div>
+      </div>
+      <input id="fileInput" type="file" accept="application/pdf"/>
+    </label>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="controls">
+        <button class="btn" id="btnLoad">Load PDF</button>
+        <button class="btn" id="btnExportAll" disabled>Export All → ZIP</button>
+        <button class="btn" id="btnClear" disabled>Clear</button>
+      </div>
+      <div class="progress" title="progress"><div class="bar" id="progressBar"></div></div>
+    </div>
+  </div>
+
+  <div id="info" style="margin-top:12px"></div>
+
+  <div id="pages" class="grid" aria-live="polite"></div>
+
+  <footer>
+    <div>Client-side PDF splitting using PDF.js + pdf-lib + JSZip. Works offline after initial load.</div>
+  </footer>
+</div>
+
+<script>
+/*
+  How it works (short):
+  - Uses PDF.js (pdfjsLib) to load & render each page to a canvas
+  - For single-page PDF export: take canvas => PNG bytes => embed into a new PDF (pdf-lib)
+  - For batch export: generate each page PDF and add to JSZip, then save
+  - All actions are client-side
+*/
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
+
+const fileInput = document.getElementById('fileInput');
+const dropzone = document.getElementById('dropzone');
+const btnLoad = document.getElementById('btnLoad');
+const btnExportAll = document.getElementById('btnExportAll');
+const btnClear = document.getElementById('btnClear');
+const pagesEl = document.getElementById('pages');
+const info = document.getElementById('info');
+const progressBar = document.getElementById('progressBar');
+
+let pdfDoc = null;
+let pageCanvases = []; // {pageNumber, canvas, blobUrl}
+let currentFileName = 'document';
+
+function setProgress(p){
+  progressBar.style.width = (Math.round(p*100)) + '%';
+}
+
+function human(n){ return n.toLocaleString() }
+
+// Drag & drop
+dropzone.addEventListener('click', ()=>fileInput.click());
+dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.style.borderColor = '#2aa6c7'; });
+dropzone.addEventListener('dragleave', ()=>{ dropzone.style.borderColor = '#1f2a36'; });
+dropzone.addEventListener('drop', (e)=>{ e.preventDefault(); dropzone.style.borderColor = '#1f2a36'; const f = e.dataTransfer.files?.[0]; if(f) handleFile(f); });
+
+// File input
+fileInput.addEventListener('change', (e)=>{ const f = e.target.files?.[0]; if(f) handleFile(f); });
+
+// Buttons
+btnLoad.addEventListener('click', ()=>fileInput.click());
+btnClear.addEventListener('click', clearAll);
+btnExportAll.addEventListener('click', exportAllPagesAsZip);
+
+async function handleFile(file){
+  resetState();
+  if (!file.type || !file.type.includes('pdf')) {
+    alert('Please upload a PDF file.');
+    return;
+  }
+  currentFileName = (file.name || 'document').replace(/\\.pdf$/i,'') || 'document';
+  info.innerHTML = `<div class="small">Loaded: <strong>${file.name}</strong> — ${human(file.size)} bytes</div>`;
+  // read as arrayBuffer
+  const ab = await file.arrayBuffer();
+  await loadAndRenderPDF(ab);
+}
+
+// Load & render PDF using PDF.js
+async function loadAndRenderPDF(arrayBuffer){
+  setProgress(0);
+  const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+  pdfDoc = await loadingTask.promise;
+  const total = pdfDoc.numPages;
+  info.innerHTML += `<div class="small"> — Pages: <strong>${total}</strong></div>`;
+  btnExportAll.disabled = false;
+  btnClear.disabled = false;
+
+  // render pages sequentially to keep memory stable
+  for (let p = 1; p <= total; p++){
+    setProgress((p-1)/total);
+    const page = await pdfDoc.getPage(p);
+    // Render at device pixel ratio to get crisp output
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    // white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    // create blob URL for preview if needed
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const url = URL.createObjectURL(blob);
+
+    pageCanvases.push({ pageNumber: p, canvas, blobUrl: url });
+    renderPageCard(p, canvas, url);
+    // allow UI to update
+    await new Promise(r => setTimeout(r, 60));
+  }
+  setProgress(1);
+}
+
+// Render UI card for a page
+function renderPageCard(pageNumber, canvas, previewUrl){
+  const card = document.createElement('div');
+  card.className = 'card';
+  const img = document.createElement('img');
+  img.className = 'thumb';
+  img.src = previewUrl;
+  img.alt = `Page ${pageNumber}`;
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const left = document.createElement('div');
+  left.innerHTML = `<div class="small">Page <strong>${pageNumber}</strong></div><div class="small">Preview</div>`;
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+
+  const btnPdf = document.createElement('button'); btnPdf.className='btn'; btnPdf.textContent = 'Download PDF';
+  const btnPng = document.createElement('button'); btnPng.className='btn'; btnPng.textContent = 'Download PNG';
+  const btnCopy = document.createElement('button'); btnCopy.className='btn'; btnCopy.textContent = 'Copy PNG';
+
+  btnPdf.addEventListener('click', ()=>downloadSinglePagePDF(pageNumber));
+  btnPng.addEventListener('click', ()=>downloadCanvasAsImage(canvas, `${currentFileName}-p${pageNumber}.png`));
+  btnCopy.addEventListener('click', ()=>copyCanvasToClipboard(canvas));
+
+  actions.appendChild(btnPdf); actions.appendChild(btnPng); actions.appendChild(btnCopy);
+
+  meta.appendChild(left); meta.appendChild(actions);
+
+  card.appendChild(img);
+  card.appendChild(meta);
+  pagesEl.appendChild(card);
+}
+
+// Convert canvas to a single-page PDF using pdf-lib and download
+async function downloadSinglePagePDF(pageNumber){
+  try {
+    const entry = pageCanvases.find(e=>e.pageNumber===pageNumber);
+    if (!entry) throw new Error('Page not found');
+    setProgress(0);
+    // get PNG bytes from canvas
+    const blob = await new Promise(res => entry.canvas.toBlob(res, 'image/png'));
+    const arrayBuffer = await blob.arrayBuffer();
+    // create a new PDF and embed PNG so page has same dimensions
+    const { PDFDocument } = PDFLib;
+    const pdfDoc = await PDFDocument.create();
+    const pngImage = await pdfDoc.embedPng(arrayBuffer);
+    const { width, height } = pngImage.scale(1);
+    const page = pdfDoc.addPage([width, height]);
+    page.drawImage(pngImage, { x:0, y:0, width, height });
+    const pdfBytes = await pdfDoc.save();
+    const outBlob = new Blob([pdfBytes], {type:'application/pdf'});
+    saveAs(outBlob, `${currentFileName}-page-${pageNumber}.pdf`);
+    setProgress(1);
+  } catch (e){
+    alert('Export failed: ' + e.message);
+    console.error(e);
+  }
+}
+
+// Download canvas as image
+function downloadCanvasAsImage(canvas, filename){
+  canvas.toBlob(blob => {
+    saveAs(blob, filename);
+  }, 'image/png');
+}
+
+// Copy canvas image to clipboard (if supported)
+async function copyCanvasToClipboard(canvas){
+  try {
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    alert('Image copied to clipboard');
+  } catch (e){
+    alert('Copy failed: ' + (e.message || e));
+  }
+}
+
+// Export all pages as separate PDFs and zip them
+async function exportAllPagesAsZip(){
+  if (pageCanvases.length === 0) { alert('No pages to export'); return; }
+  btnExportAll.disabled = true;
+  setProgress(0);
+  const zip = new JSZip();
+  const total = pageCanvases.length;
+  let i = 0;
+  for (const entry of pageCanvases){
+    i++;
+    setProgress((i-1)/total);
+    try {
+      const blob = await new Promise(res => entry.canvas.toBlob(res, 'image/png'));
+      const arrayBuffer = await blob.arrayBuffer();
+      const { PDFDocument } = PDFLib;
+      const pdfDoc = await PDFDocument.create();
+      const pngImage = await pdfDoc.embedPng(arrayBuffer);
+      const { width, height } = pngImage.scale(1);
+      const page = pdfDoc.addPage([width, height]);
+      page.drawImage(pngImage, { x:0, y:0, width, height });
+      const pdfBytes = await pdfDoc.save();
+      zip.file(`${currentFileName}-p${entry.pageNumber}.pdf`, pdfBytes);
+    } catch (e){
+      console.error('Page export failed', entry.pageNumber, e);
+    }
+    // cheap pause to keep UI responsive
+    await new Promise(r => setTimeout(r, 40));
+  }
+  setProgress(1);
+  const content = await zip.generateAsync({type:'blob'}, (meta) => {
+    setProgress(meta.percent/100);
+  });
+  saveAs(content, `${currentFileName}-pages.zip`);
+  btnExportAll.disabled = false;
+}
+
+// Utility: clear UI and revoke blob URLs
+function clearAll(){
+  for(const p of pageCanvases) if(p.blobUrl) URL.revokeObjectURL(p.blobUrl);
+  pageCanvases = [];
+  pagesEl.innerHTML = '';
+  info.innerHTML = '';
+  setProgress(0);
+  btnExportAll.disabled = true;
+  btnClear.disabled = true;
+  pdfDoc = null;
+}
+
+// reset state helper
+function resetState(){
+  clearAll();
+  pagesEl.innerHTML = '';
+  info.innerHTML = '<div class="small">Loading PDF…</div>';
+}
+
+// helper: convert fetch URL to dataUrl
+async function fetchToDataURL(url){
+  const r = await fetch(url);
+  const b = await r.blob();
+  return await new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = ()=>res(fr.result);
+    fr.readAsDataURL(b);
+  });
+}
+
+// Parse PDF from URL (optional feature): Accept ?url= param
+async function loadFromUrlParam(){
+  try {
+    const params = new URLSearchParams(location.search);
+    const url = params.get('url');
+    if(!url) return;
+    info.innerHTML = '<div class="small">Fetching PDF from URL…</div>';
+    const dataUrl = await fetchToDataURL(url);
+    // convert dataUrl to arrayBuffer
+    const res = await fetch(dataUrl);
+    const ab = await res.arrayBuffer();
+    const nameFromUrl = (new URL(url)).pathname.split('/').pop() || 'document.pdf';
+    currentFileName = nameFromUrl.replace(/\\.pdf$/i, '');
+    await loadAndRenderPDF(ab);
+  } catch (e) {
+    console.warn('URL load failed', e);
+  }
+}
+
+// Try to load from ?url= param
+loadFromUrlParam();
+
+</script>
+</body>
+</html>
