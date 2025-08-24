@@ -577,7 +577,7 @@
 async function exportPageAsPdf(st){
   const blob = await exportCanvasImage(st, 'png');
   const arr = await blob.arrayBuffer();
-  const pdfDoc = await pdfLib.PDFDocument.create();  // fixed here
+  const pdfDoc = await pdfLib.PDFDocument.create();
   const img = await pdfDoc.embedPng(arr);
   const { width, height } = img.scale(1);
   const page = pdfDoc.addPage([width, height]);
