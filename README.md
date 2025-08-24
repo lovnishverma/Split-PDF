@@ -49,7 +49,7 @@ No backend required – everything runs locally in the browser! 🚀
 
 ## 📷 Screenshot
 
-> <img width="943" height="895" alt="image" src="https://github.com/user-attachments/assets/0df8c9fd-f553-4413-8bbc-de0a5ff84f37" />
+<img width="943" height="895" alt="image" src="https://github.com/user-attachments/assets/0df8c9fd-f553-4413-8bbc-de0a5ff84f37" />
 
 
 ---
