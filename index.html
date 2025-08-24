@@ -3,42 +3,51 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Split PDF — Pages to Separate PDFs (Client-side)</title>
+<title>Split PDF — Vector Export, Reorder, Rotate, Crop (Client-side)</title>
 <style>
-  :root{--bg:#0b1220;--card:#0f172a;--muted:#9aa6b2;--text:#e6eef6;--accent:#38bdf8}
+  :root{--bg:#0b1220;--card:#0f172a;--muted:#9aa6b2;--text:#e6eef6;--accent:#38bdf8;--danger:#ef4444}
   html,body{height:100%;margin:0;background:linear-gradient(180deg,#07101a,#071822);color:var(--text);font-family:Inter,Segoe UI,Roboto,system-ui,Arial}
-  .wrap{max-width:1100px;margin:28px auto;padding:20px}
-  h1{margin:0 0 6px;font-size:1.6rem}
-  p.lead{margin:0 0 18px;color:var(--muted)}
+  .wrap{max-width:1100px;margin:20px auto;padding:18px}
+  h1{margin:0 0 6px;font-size:1.4rem}
+  p.lead{margin:0 0 12px;color:var(--muted)}
   .uploader{display:flex;gap:12px;align-items:center}
-  .drop{flex:1;border:2px dashed #1f2a36;border-radius:12px;padding:18px;background:var(--card);min-height:110px;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer}
-  .btn{background:var(--accent);color:#02151c;padding:10px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+  .drop{flex:1;border:2px dashed #1f2a36;border-radius:12px;padding:14px;background:var(--card);min-height:90px;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer}
+  .btn{background:var(--accent);color:#02151c;padding:8px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
   input[type=file]{display:none}
-  .controls{display:flex;gap:10px;align-items:center;margin-top:12px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(200px,1fr));gap:14px;margin-top:18px}
-  .card{background:linear-gradient(180deg,#071826,#08131c);border:1px solid #13303f;padding:12px;border-radius:12px}
-  .thumb{width:100%;height:260px;display:block;background:#081216;border-radius:8px;object-fit:contain}
-  .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+  .controls{display:flex;gap:10px;align-items:center;margin-top:10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px,1fr));gap:12px;margin-top:14px}
+  .card{background:linear-gradient(180deg,#071826,#08131c);border:1px solid #13303f;padding:10px;border-radius:10px}
+  .thumb{width:100%;height:200px;display:block;background:#081216;border-radius:8px;object-fit:contain}
+  .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
   .small{font-size:0.9rem;color:var(--muted)}
-  .actions{display:flex;gap:8px}
+  .actions{display:flex;gap:6px;align-items:center}
   .pill{padding:6px 8px;border-radius:999px;background:#071a22;border:1px solid #123241;color:var(--muted)}
-  footer{margin-top:22px;color:var(--muted);font-size:0.9rem}
-  .progress{height:8px;background:#0b1720;border-radius:999px;overflow:hidden;margin-top:10px}
+  footer{margin-top:16px;color:var(--muted);font-size:0.9rem}
+  .progress{height:10px;background:#0b1720;border-radius:999px;overflow:hidden;margin-top:10px}
   .bar{height:100%;background:linear-gradient(90deg,#38bdf8,#22c1c4);width:0%}
   .note{margin-top:8px;color:var(--muted);font-size:0.9rem}
+  .controls-right{display:flex;gap:8px;align-items:center}
+  .status{font-size:0.9rem;color:var(--muted)}
+  .drag-handle{cursor:grab;padding:6px;border-radius:6px;background:#061218;border:1px solid #123241}
+  .rotate-btn{padding:6px;border-radius:6px;background:#081826;border:1px solid #123241;color:var(--muted)}
+  .danger{background:var(--danger);color:#fff}
+  .retry{background:#ffb3b3;color:#300}
+  .crop-overlay{position:absolute; border:2px dashed #22d3ee; pointer-events:none}
+  .controls-compact{display:flex;gap:6px;flex-wrap:wrap}
 </style>
-<!-- PDF.js -->
+
+<!-- PDF.js for thumbnails -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
-<!-- pdf-lib -->
+<!-- pdf-lib for vector-preserving page copy -->
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@2.22.0/dist/pdf-lib.min.js"></script>
-<!-- JSZip & FileSaver -->
+<!-- JSZip & FileSaver for batch zip exports -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <h1>Split PDF — Export pages as separate PDF files</h1>
-  <p class="lead">Upload a PDF, preview pages, download single pages as PDFs or export all pages as separate PDFs in a ZIP. Everything runs in your browser.</p>
+  <h1>Split PDF — Advanced</h1>
+  <p class="lead">Load a PDF, reorder pages, rotate, optionally crop (vector or raster fallback), and export vector-preserved single-page PDFs or a zipped batch. Fully client-side.</p>
 
   <div class="uploader">
     <label class="drop" id="dropzone">
@@ -52,10 +61,14 @@
     <div style="display:flex;flex-direction:column;gap:10px">
       <div class="controls">
         <button class="btn" id="btnLoad">Load PDF</button>
-        <button class="btn" id="btnExportAll" disabled>Export All → ZIP</button>
-        <button class="btn" id="btnClear" disabled>Clear</button>
+        <div class="controls-right">
+          <button class="btn" id="btnExportAll">Export All (vector)</button>
+          <button class="btn" id="btnExportAllRaster">Export All (raster-crop fallback)</button>
+          <button class="btn" id="btnClear">Clear</button>
+        </div>
       </div>
       <div class="progress" title="progress"><div class="bar" id="progressBar"></div></div>
+      <div class="status" id="statusLine">Idle.</div>
     </div>
   </div>
 
@@ -64,17 +77,17 @@
   <div id="pages" class="grid" aria-live="polite"></div>
 
   <footer>
-    <div>Client-side PDF splitting using PDF.js + pdf-lib + JSZip. Works offline after initial load.</div>
+    <div>Vector export uses <strong>pdf-lib</strong> page copying (preserves vectors & text). Crop attempts to set PDF crop box; if you choose raster crop, the page will be rasterized and embedded (lossy).</div>
   </footer>
 </div>
 
 <script>
-/*
-  How it works (short):
-  - Uses PDF.js (pdfjsLib) to load & render each page to a canvas
-  - For single-page PDF export: take canvas => PNG bytes => embed into a new PDF (pdf-lib)
-  - For batch export: generate each page PDF and add to JSZip, then save
-  - All actions are client-side
+/* Advanced splitter with:
+   - vector-preserved export via pdf-lib.copyPages
+   - drag & drop reorder
+   - rotate (applied to exported page)
+   - crop (vector-best-effort via cropBox, raster fallback)
+   - progress + retry
 */
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
@@ -83,34 +96,36 @@ const fileInput = document.getElementById('fileInput');
 const dropzone = document.getElementById('dropzone');
 const btnLoad = document.getElementById('btnLoad');
 const btnExportAll = document.getElementById('btnExportAll');
+const btnExportAllRaster = document.getElementById('btnExportAllRaster');
 const btnClear = document.getElementById('btnClear');
 const pagesEl = document.getElementById('pages');
 const info = document.getElementById('info');
 const progressBar = document.getElementById('progressBar');
+const statusLine = document.getElementById('statusLine');
 
-let pdfDoc = null;
-let pageCanvases = []; // {pageNumber, canvas, blobUrl}
-let currentFileName = 'document';
+let pdfJsDoc = null;         // PDF.js document (for thumbnails, size)
+let originalPdfBytes = null; // ArrayBuffer of original PDF
+let pdfLibDoc = null;        // pdf-lib loaded doc (PDFDocument)
+let pageState = [];          // array of { idx: originalIndex (1-based), rotation: 0|90|180|270, crop: {mode:'none'|'vector'|'raster', box:{x,y,w,h}}, thumbnailUrl, failed:false }
 
 function setProgress(p){
-  progressBar.style.width = (Math.round(p*100)) + '%';
+  progressBar.style.width = Math.round(p*100) + '%';
 }
+function logStatus(s){ statusLine.textContent = s; }
 
 function human(n){ return n.toLocaleString() }
 
-// Drag & drop
+// Drag & drop handlers
 dropzone.addEventListener('click', ()=>fileInput.click());
 dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.style.borderColor = '#2aa6c7'; });
 dropzone.addEventListener('dragleave', ()=>{ dropzone.style.borderColor = '#1f2a36'; });
 dropzone.addEventListener('drop', (e)=>{ e.preventDefault(); dropzone.style.borderColor = '#1f2a36'; const f = e.dataTransfer.files?.[0]; if(f) handleFile(f); });
 
-// File input
 fileInput.addEventListener('change', (e)=>{ const f = e.target.files?.[0]; if(f) handleFile(f); });
-
-// Buttons
 btnLoad.addEventListener('click', ()=>fileInput.click());
 btnClear.addEventListener('click', clearAll);
-btnExportAll.addEventListener('click', exportAllPagesAsZip);
+btnExportAll.addEventListener('click', ()=>exportAll({ rasterFallback:false }));
+btnExportAllRaster.addEventListener('click', ()=>exportAll({ rasterFallback:true }));
 
 async function handleFile(file){
   resetState();
@@ -118,212 +133,504 @@ async function handleFile(file){
     alert('Please upload a PDF file.');
     return;
   }
-  currentFileName = (file.name || 'document').replace(/\\.pdf$/i,'') || 'document';
   info.innerHTML = `<div class="small">Loaded: <strong>${file.name}</strong> — ${human(file.size)} bytes</div>`;
-  // read as arrayBuffer
-  const ab = await file.arrayBuffer();
-  await loadAndRenderPDF(ab);
+  originalPdfBytes = await file.arrayBuffer();
+  await loadDocs(originalPdfBytes);
 }
 
-// Load & render PDF using PDF.js
-async function loadAndRenderPDF(arrayBuffer){
+// load both PDF.js and pdf-lib versions
+async function loadDocs(arrayBuffer){
   setProgress(0);
+  logStatus('Loading PDF (thumbnails)...');
   const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
-  pdfDoc = await loadingTask.promise;
-  const total = pdfDoc.numPages;
-  info.innerHTML += `<div class="small"> — Pages: <strong>${total}</strong></div>`;
-  btnExportAll.disabled = false;
-  btnClear.disabled = false;
+  pdfJsDoc = await loadingTask.promise;
+  info.innerHTML += `<div class="small"> — Pages: <strong>${pdfJsDoc.numPages}</strong></div>`;
+  // Load pdf-lib doc for vector copy
+  logStatus('Preparing internal PDF for vector export...');
+  pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+  // build page state
+  pageState = [];
+  for(let i=1;i<=pdfJsDoc.numPages;i++){
+    pageState.push({ idx:i, rotation:0, crop:{mode:'none', box:null}, thumbnailUrl:null, failed:false });
+  }
+  // render thumbnails sequentially
+  await renderThumbnails();
+  setProgress(1);
+  logStatus('Ready. Reorder, rotate or crop pages then export.');
+}
 
-  // render pages sequentially to keep memory stable
-  for (let p = 1; p <= total; p++){
-    setProgress((p-1)/total);
-    const page = await pdfDoc.getPage(p);
-    // Render at device pixel ratio to get crisp output
-    const viewport = page.getViewport({ scale: 1.5 });
+// Render thumbnails for each page (sequential to avoid memory spike)
+async function renderThumbnails(){
+  pagesEl.innerHTML = '';
+  for(let i=0;i<pageState.length;i++){
+    setProgress(i/pageState.length);
+    const pNum = pageState[i].idx;
+    const page = await pdfJsDoc.getPage(pNum);
+    const viewport = page.getViewport({ scale: 1.0 });
+    // target width ~ 600px max to keep file size reasonable
+    const scale = Math.min(1.2, 220 / viewport.width * (viewport.width/viewport.width));
+    const scaled = page.getViewport({ scale: scale * (window.devicePixelRatio||1) * 0.9 });
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
+    canvas.width = Math.floor(scaled.width);
+    canvas.height = Math.floor(scaled.height);
     // white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0,0,canvas.width, canvas.height);
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    // create blob URL for preview if needed
+    await page.render({ canvasContext: ctx, viewport: scaled }).promise;
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     const url = URL.createObjectURL(blob);
-
-    pageCanvases.push({ pageNumber: p, canvas, blobUrl: url });
-    renderPageCard(p, canvas, url);
-    // allow UI to update
-    await new Promise(r => setTimeout(r, 60));
+    pageState[i].thumbnailUrl = url;
+    renderPageCard(i); // pass current index in pageState array
+    await new Promise(r=>setTimeout(r,25));
   }
-  setProgress(1);
 }
 
-// Render UI card for a page
-function renderPageCard(pageNumber, canvas, previewUrl){
+// Render a page card (index in pageState)
+function renderPageCard(stateIndex){
+  const st = pageState[stateIndex];
   const card = document.createElement('div');
   card.className = 'card';
-  const img = document.createElement('img');
-  img.className = 'thumb';
-  img.src = previewUrl;
-  img.alt = `Page ${pageNumber}`;
-  const meta = document.createElement('div');
-  meta.className = 'meta';
-  const left = document.createElement('div');
-  left.innerHTML = `<div class="small">Page <strong>${pageNumber}</strong></div><div class="small">Preview</div>`;
-  const actions = document.createElement('div');
-  actions.className = 'actions';
+  card.dataset.stateIndex = stateIndex;
+  card.draggable = true;
 
-  const btnPdf = document.createElement('button'); btnPdf.className='btn'; btnPdf.textContent = 'Download PDF';
-  const btnPng = document.createElement('button'); btnPng.className='btn'; btnPng.textContent = 'Download PNG';
-  const btnCopy = document.createElement('button'); btnCopy.className='btn'; btnCopy.textContent = 'Copy PNG';
+  // drag handle + position label
+  const topRow = document.createElement('div');
+  topRow.style.display='flex'; topRow.style.justifyContent='space-between'; topRow.style.alignItems='center';
+  const leftGroup = document.createElement('div'); leftGroup.style.display='flex'; leftGroup.style.alignItems='center'; leftGroup.style.gap='8px';
+  const handle = document.createElement('div'); handle.className='drag-handle'; handle.title='Drag to reorder'; handle.textContent='☰';
+  leftGroup.appendChild(handle);
+  const title = document.createElement('div'); title.innerHTML = `<div class="small">Page <strong>${st.idx}</strong></div><div class="small">Position <strong>${stateIndex+1}</strong></div>`;
+  leftGroup.appendChild(title);
+  topRow.appendChild(leftGroup);
 
-  btnPdf.addEventListener('click', ()=>downloadSinglePagePDF(pageNumber));
-  btnPng.addEventListener('click', ()=>downloadCanvasAsImage(canvas, `${currentFileName}-p${pageNumber}.png`));
-  btnCopy.addEventListener('click', ()=>copyCanvasToClipboard(canvas));
+  const rightGroup = document.createElement('div'); rightGroup.style.display='flex'; rightGroup.style.gap='6px';
+  const rotateBtn = document.createElement('button'); rotateBtn.className='rotate-btn'; rotateBtn.title='Rotate 90° clockwise'; rotateBtn.textContent='⟳';
+  rotateBtn.addEventListener('click', ()=>{ st.rotation = (st.rotation + 90) % 360; updateCardRotation(card, st.rotation); });
+  rightGroup.appendChild(rotateBtn);
+  const cropBtn = document.createElement('button'); cropBtn.className='rotate-btn'; cropBtn.title='Crop (open crop modal)'; cropBtn.textContent='✂';
+  cropBtn.addEventListener('click', ()=>openCropModal(stateIndex));
+  rightGroup.appendChild(cropBtn);
+  const removeBtn = document.createElement('button'); removeBtn.className='rotate-btn'; removeBtn.title='Remove page'; removeBtn.textContent='✖';
+  removeBtn.addEventListener('click', ()=>{ if(confirm('Remove this page from output?')){ pageState.splice(stateIndex,1); refreshAllCards(); }});
+  rightGroup.appendChild(removeBtn);
 
-  actions.appendChild(btnPdf); actions.appendChild(btnPng); actions.appendChild(btnCopy);
+  topRow.appendChild(rightGroup);
+  card.appendChild(topRow);
+
+  const img = document.createElement('img'); img.className='thumb'; img.src = st.thumbnailUrl; img.alt = `Page ${st.idx}`;
+  card.appendChild(img);
+
+  const meta = document.createElement('div'); meta.className='meta';
+  const left = document.createElement('div'); left.innerHTML = `<div class="small">Orig: <strong>${st.idx}</strong></div><div class="small">Rot: <strong>${st.rotation}°</strong></div>`;
+  const actions = document.createElement('div'); actions.className='actions';
+  const downloadBtn = document.createElement('button'); downloadBtn.className='btn'; downloadBtn.textContent='Export Page (vector)';
+  downloadBtn.addEventListener('click', ()=>exportSingle(stateIndex, { rasterFallback:false }));
+  const downloadRasterBtn = document.createElement('button'); downloadRasterBtn.className='btn'; downloadRasterBtn.textContent='Export (raster crop)';
+  downloadRasterBtn.addEventListener('click', ()=>exportSingle(stateIndex, { rasterFallback:true }));
+  const retryBtn = document.createElement('button'); retryBtn.className='btn retry'; retryBtn.style.display='none'; retryBtn.textContent='Retry';
+  retryBtn.addEventListener('click', ()=>exportSingle(stateIndex, { rasterFallback:false }));
+  actions.appendChild(downloadBtn); actions.appendChild(downloadRasterBtn); actions.appendChild(retryBtn);
 
   meta.appendChild(left); meta.appendChild(actions);
-
-  card.appendChild(img);
   card.appendChild(meta);
+
+  // attach drag/drop events using dataset stateIndex
+  card.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', String(stateIndex)); card.style.opacity=0.5; });
+  card.addEventListener('dragend', ()=>{ card.style.opacity=1; });
+  card.addEventListener('dragover', (e)=>{ e.preventDefault(); card.style.outline='2px dashed #2aa6c7'; });
+  card.addEventListener('dragleave', ()=>{ card.style.outline=''; });
+  card.addEventListener('drop', (e)=>{ e.preventDefault(); card.style.outline=''; const from = Number(e.dataTransfer.getData('text/plain')); const to = Number(card.dataset.stateIndex); if(!Number.isFinite(from)) return; moveState(from,to); });
+
+  // update rotation text when changed
+  updateCardRotation(card, st.rotation);
+
+  // store card reference
   pagesEl.appendChild(card);
+  refreshCardIndices();
 }
 
-// Convert canvas to a single-page PDF using pdf-lib and download
-async function downloadSinglePagePDF(pageNumber){
-  try {
-    const entry = pageCanvases.find(e=>e.pageNumber===pageNumber);
-    if (!entry) throw new Error('Page not found');
-    setProgress(0);
-    // get PNG bytes from canvas
-    const blob = await new Promise(res => entry.canvas.toBlob(res, 'image/png'));
-    const arrayBuffer = await blob.arrayBuffer();
-    // create a new PDF and embed PNG so page has same dimensions
-    const { PDFDocument } = PDFLib;
-    const pdfDoc = await PDFDocument.create();
-    const pngImage = await pdfDoc.embedPng(arrayBuffer);
-    const { width, height } = pngImage.scale(1);
-    const page = pdfDoc.addPage([width, height]);
-    page.drawImage(pngImage, { x:0, y:0, width, height });
-    const pdfBytes = await pdfDoc.save();
-    const outBlob = new Blob([pdfBytes], {type:'application/pdf'});
-    saveAs(outBlob, `${currentFileName}-page-${pageNumber}.pdf`);
-    setProgress(1);
-  } catch (e){
-    alert('Export failed: ' + e.message);
-    console.error(e);
-  }
+function updateCardRotation(card, rotation){
+  // find rot text element
+  const smalls = card.querySelectorAll('.small');
+  if (smalls[1]) smalls[1].innerHTML = `Rot: <strong>${rotation}°</strong>`;
+  // indicate visually (CSS transform)
+  const img = card.querySelector('.thumb');
+  if(img) img.style.transform = `rotate(${rotation}deg)`;
 }
 
-// Download canvas as image
-function downloadCanvasAsImage(canvas, filename){
-  canvas.toBlob(blob => {
-    saveAs(blob, filename);
-  }, 'image/png');
+// Move pageState[from] to position to (before/after behavior)
+function moveState(from, to){
+  if (from === to) return;
+  const item = pageState.splice(from,1)[0];
+  pageState.splice(to,0,item);
+  refreshAllCards();
 }
 
-// Copy canvas image to clipboard (if supported)
-async function copyCanvasToClipboard(canvas){
-  try {
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-    alert('Image copied to clipboard');
-  } catch (e){
-    alert('Copy failed: ' + (e.message || e));
-  }
-}
-
-// Export all pages as separate PDFs and zip them
-async function exportAllPagesAsZip(){
-  if (pageCanvases.length === 0) { alert('No pages to export'); return; }
-  btnExportAll.disabled = true;
-  setProgress(0);
-  const zip = new JSZip();
-  const total = pageCanvases.length;
-  let i = 0;
-  for (const entry of pageCanvases){
-    i++;
-    setProgress((i-1)/total);
-    try {
-      const blob = await new Promise(res => entry.canvas.toBlob(res, 'image/png'));
-      const arrayBuffer = await blob.arrayBuffer();
-      const { PDFDocument } = PDFLib;
-      const pdfDoc = await PDFDocument.create();
-      const pngImage = await pdfDoc.embedPng(arrayBuffer);
-      const { width, height } = pngImage.scale(1);
-      const page = pdfDoc.addPage([width, height]);
-      page.drawImage(pngImage, { x:0, y:0, width, height });
-      const pdfBytes = await pdfDoc.save();
-      zip.file(`${currentFileName}-p${entry.pageNumber}.pdf`, pdfBytes);
-    } catch (e){
-      console.error('Page export failed', entry.pageNumber, e);
-    }
-    // cheap pause to keep UI responsive
-    await new Promise(r => setTimeout(r, 40));
-  }
-  setProgress(1);
-  const content = await zip.generateAsync({type:'blob'}, (meta) => {
-    setProgress(meta.percent/100);
-  });
-  saveAs(content, `${currentFileName}-pages.zip`);
-  btnExportAll.disabled = false;
-}
-
-// Utility: clear UI and revoke blob URLs
-function clearAll(){
-  for(const p of pageCanvases) if(p.blobUrl) URL.revokeObjectURL(p.blobUrl);
-  pageCanvases = [];
+// refresh all cards UI after changes
+function refreshAllCards(){
+  // revoke old thumbnails then re-render list
   pagesEl.innerHTML = '';
-  info.innerHTML = '';
-  setProgress(0);
-  btnExportAll.disabled = true;
-  btnClear.disabled = true;
-  pdfDoc = null;
+  for(let i=0;i<pageState.length;i++) renderPageCard(i);
+  refreshCardIndices();
 }
 
-// reset state helper
+function refreshCardIndices(){
+  // reassign data-stateIndex for each card and update position text
+  const cards = pagesEl.querySelectorAll('.card');
+  cards.forEach((c, idx) => {
+    c.dataset.stateIndex = idx;
+    const posSmall = c.querySelector('.small strong') // rough; we'll recalc simple
+    // update position text element: find the element showing position
+    const titleDiv = c.querySelector('div > div > div:nth-child(2)');
+    if (titleDiv) {
+      titleDiv.innerHTML = `Position <strong>${idx+1}</strong>`;
+    }
+  });
+}
+
+// open crop modal: simple cropping UI overlay on thumbnail with numeric entry and "vector vs raster" choice
+function openCropModal(stateIndex){
+  const st = pageState[stateIndex];
+  // create a lightweight modal
+  const modal = document.createElement('div');
+  Object.assign(modal.style, { position:'fixed', inset:0, background:'rgba(3,6,12,0.75)', display:'grid', placeItems:'center', zIndex:9999 });
+  const box = document.createElement('div'); Object.assign(box.style, { width:'90%', maxWidth:'900px', background:'#071826', borderRadius:'10px', padding:'12px', border:'1px solid #123241' });
+  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
+    <div><strong>Crop — Page ${st.idx}</strong><div class="small">Pick mode: vector (crop box) or raster (pixel crop)</div></div>
+    <div><button id="closeCrop">Close</button></div></div><hr style="border-color:#123241;margin:8px 0">`;
+
+  // show thumbnail + overlay canvas to draw rect (simple)
+  const thumbWrap = document.createElement('div'); thumbWrap.style.position='relative'; thumbWrap.style.display='flex'; thumbWrap.style.justifyContent='center';
+  const img = document.createElement('img'); img.src = st.thumbnailUrl; img.style.maxWidth='100%'; img.style.borderRadius='6px'; img.style.background='#fff';
+  thumbWrap.appendChild(img);
+  box.appendChild(thumbWrap);
+
+  // numeric input controls for crop coordinates in PDF units (approx), we will map relative values
+  const controls = document.createElement('div'); controls.style.marginTop='10px';
+  controls.innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <label class="small">Mode:
+        <select id="cropMode"><option value="none">None</option><option value="vector">Vector (crop box)</option><option value="raster">Raster (pixel crop)</option></select>
+      </label>
+      <label class="small">Left % <input id="cropL" type="number" min="0" max="100" value="${st.crop.box? (st.crop.box.l*100).toFixed(1) : 0 }" style="width:80px"/></label>
+      <label class="small">Top % <input id="cropT" type="number" min="0" max="100" value="${st.crop.box? (st.crop.box.t*100).toFixed(1) : 0 }" style="width:80px"/></label>
+      <label class="small">Width % <input id="cropW" type="number" min="1" max="100" value="${st.crop.box? (st.crop.box.w*100).toFixed(1) : 100 }" style="width:80px"/></label>
+      <label class="small">Height % <input id="cropH" type="number" min="1" max="100" value="${st.crop.box? (st.crop.box.h*100).toFixed(1) : 100 }" style="width:80px"/></label>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+      <button id="applyCrop" class="btn">Apply</button>
+      <button id="cancelCrop" class="btn">Cancel</button>
+    </div>
+  `;
+  box.appendChild(controls);
+  modal.appendChild(box);
+  document.body.appendChild(modal);
+
+  // close handlers
+  modal.querySelector('#closeCrop').addEventListener('click', ()=>modal.remove());
+  modal.querySelector('#cancelCrop').addEventListener('click', ()=>modal.remove());
+  modal.querySelector('#applyCrop').addEventListener('click', ()=>{
+    const mode = modal.querySelector('#cropMode').value;
+    const l = Number(modal.querySelector('#cropL').value)/100 || 0;
+    const t = Number(modal.querySelector('#cropT').value)/100 || 0;
+    const w = Number(modal.querySelector('#cropW').value)/100 || 1;
+    const h = Number(modal.querySelector('#cropH').value)/100 || 1;
+    if (mode === 'none') {
+      st.crop.mode = 'none'; st.crop.box = null;
+    } else {
+      st.crop.mode = mode; st.crop.box = { l: clamp01(l), t: clamp01(t), w: clamp01(w), h: clamp01(h) };
+    }
+    modal.remove();
+    refreshAllCards();
+  });
+
+  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+}
+
+// Export single page by stateIndex
+async function exportSingle(stateIndex, options = { rasterFallback:false }){
+  const st = pageState[stateIndex];
+  const name = `page-${st.idx}`;
+  try{
+    logStatus(`Exporting page ${st.idx}...`);
+    setProgress(0);
+    // Try vector copy first (preserve vectors)
+    if (st.crop.mode === 'raster' || options.rasterFallback) {
+      // Use raster path: render page fully at high res, apply crop, embed image into new PDF
+      await exportSingleRaster(st, name);
+    } else {
+      // Attempt vector export (preserve content)
+      await exportSingleVector(st, name);
+    }
+    logStatus(`Exported ${name}.pdf`);
+    setProgress(1);
+  }catch(err){
+    console.error(err);
+    st.failed = true;
+    logStatus(`Export failed for page ${st.idx}: ${err.message || err}`);
+    // show retry button on the corresponding card
+    const card = findCardByStateIndex(stateIndex);
+    if (card) {
+      const retryBtn = card.querySelector('.retry');
+      if (retryBtn) retryBtn.style.display = 'inline-block';
+    }
+    // If vector export failed and raster fallback allowed, attempt raster export
+    if (!options.rasterFallback) {
+      const fallback = confirm('Vector export failed for this page. Try raster fallback? (image-based export will be used)');
+      if (fallback) await exportSingle(stateIndex, { rasterFallback:true });
+    }
+  }
+}
+
+function findCardByStateIndex(stateIndex){
+  return pagesEl.querySelector(`.card[data-state-index="${stateIndex}"]`);
+}
+
+// Vector export: copy page from original pdf-lib document and apply rotation/crop
+async function exportSingleVector(st, filePrefix){
+  // copyPages with pdf-lib; this preserves vector content
+  const srcDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
+  const [copied] = await srcDoc.copyPages(srcDoc, [st.idx - 1]); // NOTE: using same doc for simplicity
+  // But pdf-lib expects copy from one doc to target doc; better approach:
+  // We'll load original as pdf-lib, create a new pdf-lib doc and copyPages from original
+  const original = await PDFLib.PDFDocument.load(originalPdfBytes);
+  const newDoc = await PDFLib.PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(original, [st.idx - 1]);
+  const page = copiedPages[0];
+  // Apply rotation if needed
+  if (st.rotation && st.rotation % 360 !== 0) {
+    page.setRotation(PDFLib.degrees(st.rotation));
+  }
+  // Apply vector crop by setting crop box if requested (best-effort)
+  if (st.crop && st.crop.mode === 'vector' && st.crop.box) {
+    // Crop box coordinates: we'll map percentage to page size
+    const { width, height } = page.getSize();
+    const l = st.crop.box.l * width;
+    const t = st.crop.box.t * height;
+    const w = st.crop.box.w * width;
+    const h = st.crop.box.h * height;
+    // setCropBox isn't in all pdf-lib versions publicly; we'll attempt via setTrimBox / setCropBox via page.node
+    try {
+      // prefer official api if available
+      if (typeof page.setCropBox === 'function') {
+        page.setCropBox(l, height - (t + h), l + w, height - t);
+      } else {
+        // low-level manipulation: set CropBox array on the page dictionary
+        const cropArray = [PDFLib.PDFNumber.of(l), PDFLib.PDFNumber.of(height - (t + h)), PDFLib.PDFNumber.of(l + w), PDFLib.PDFNumber.of(height - t)];
+        page.node.set(PDFLib.PDFName.of('CropBox'), PDFLib.PDFArray.fromArray(cropArray, newDoc.context));
+      }
+    } catch(e){
+      console.warn('Vector crop not fully supported by pdf-lib in this environment. Using page as-is.', e);
+      // We continue — the page will be exported without crop (viewer may still support CropBox if set)
+    }
+  }
+  newDoc.addPage(page);
+  const pdfBytes = await newDoc.save();
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  saveAs(blob, `${filePrefix}.pdf`);
+}
+
+// Raster export: render page to high-res canvas, crop in pixels, embed image into PDF
+async function exportSingleRaster(st, filePrefix){
+  // Render the full page at a high scale (device pixel ratio * 2)
+  const pNum = st.idx;
+  const page = await pdfJsDoc.getPage(pNum);
+  // determine scale for high quality (e.g., 2.5)
+  const scaleFactor = 2.5 * (window.devicePixelRatio || 1);
+  const viewport = page.getViewport({ scale: scaleFactor });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  // apply pixel crop if requested
+  let cropImageCanvas = canvas;
+  if (st.crop && st.crop.mode !== 'none' && st.crop.box) {
+    const c = document.createElement('canvas');
+    const sx = Math.round(st.crop.box.l * canvas.width);
+    const sy = Math.round(st.crop.box.t * canvas.height);
+    const sw = Math.round(st.crop.box.w * canvas.width);
+    const sh = Math.round(st.crop.box.h * canvas.height);
+    c.width = sw; c.height = sh;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    cropImageCanvas = c;
+  }
+
+  // convert to blob
+  const blob = await new Promise(res => cropImageCanvas.toBlob(res, 'image/png', 0.95));
+  const arrBuf = await blob.arrayBuffer();
+  // embed in new PDF
+  const newDoc = await PDFLib.PDFDocument.create();
+  const img = await newDoc.embedPng(arrBuf);
+  const { width, height } = img.scale(1);
+  const pagePdf = newDoc.addPage([width, height]);
+  pagePdf.drawImage(img, { x:0, y:0, width, height });
+  // apply rotation if needed (rotation of canvas embedded image)
+  if (st.rotation && st.rotation % 360 !== 0) {
+    pagePdf.setRotation(PDFLib.degrees(st.rotation));
+  }
+  const pdfBytes = await newDoc.save();
+  saveAs(new Blob([pdfBytes], {type:'application/pdf'}), `${filePrefix}-raster.pdf`);
+}
+
+// Export all selected pages as vector-preserved single-page PDFs & zip them
+async function exportAll({ rasterFallback=false } = {}) {
+  if (!pdfLibDoc) { alert('No PDF loaded'); return; }
+  if (pageState.length === 0) { alert('No pages'); return; }
+  btnExportAll.disabled = true;
+  btnExportAllRaster.disabled = true;
+  btnClear.disabled = true;
+  setProgress(0);
+  logStatus('Generating pages...');
+  const zip = new JSZip();
+  const total = pageState.length;
+  let completed = 0;
+  const failedIndices = [];
+  for (let i = 0; i < pageState.length; i++) {
+    const st = pageState[i];
+    try {
+      // Try vector export
+      try {
+        const pdfBytes = await exportPageToBytesVector(st);
+        zip.file(`page-${st.idx}.pdf`, pdfBytes);
+      } catch (ve) {
+        console.warn('Vector export failed, trying raster fallback if enabled', ve);
+        if (rasterFallback) {
+          const pdfBytes = await exportPageToBytesRaster(st);
+          zip.file(`page-${st.idx}-raster.pdf`, pdfBytes);
+        } else {
+          throw ve;
+        }
+      }
+      completed++;
+      setProgress(completed/total);
+      logStatus(`Processed ${completed}/${total}`);
+    } catch (err) {
+      console.error('Page failed', st.idx, err);
+      st.failed = true;
+      failedIndices.push(i);
+      // attach retry UI later
+    }
+    // small delay for UI responsiveness
+    await new Promise(r=>setTimeout(r,40));
+  }
+
+  if (failedIndices.length > 0) {
+    logStatus(`Completed with ${failedIndices.length} failed pages. You may retry them individually.`);
+  } else {
+    logStatus('All pages processed. Preparing ZIP...');
+  }
+  const content = await zip.generateAsync({ type: 'blob' }, (meta) => {
+    setProgress(meta.percent / 100);
+  });
+  saveAs(content, `pages-${Date.now()}.zip`);
+  btnExportAll.disabled = false;
+  btnExportAllRaster.disabled = false;
+  btnClear.disabled = false;
+  refreshAllCards(); // show retry buttons if any failed
+}
+
+async function exportPageToBytesVector(st){
+  // create new pdf-lib doc and copy the original page into it
+  const original = await PDFLib.PDFDocument.load(originalPdfBytes);
+  const newDoc = await PDFLib.PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(original, [st.idx - 1]);
+  const page = copiedPages[0];
+
+  // Rotation applied
+  if (st.rotation && st.rotation % 360 !== 0) page.setRotation(PDFLib.degrees(st.rotation));
+
+  // Apply vector crop if requested
+  if (st.crop && st.crop.mode === 'vector' && st.crop.box) {
+    try {
+      const { width, height } = page.getSize();
+      const l = st.crop.box.l * width;
+      const t = st.crop.box.t * height;
+      const w = st.crop.box.w * width;
+      const h = st.crop.box.h * height;
+      // attempt official API, else fallback to low-level
+      if (typeof page.setCropBox === 'function') {
+        page.setCropBox(l, height - (t + h), l + w, height - t);
+      } else {
+        const cropArray = [PDFLib.PDFNumber.of(l), PDFLib.PDFNumber.of(height - (t + h)), PDFLib.PDFNumber.of(l + w), PDFLib.PDFNumber.of(height - t)];
+        page.node.set(PDFLib.PDFName.of('CropBox'), PDFLib.PDFArray.fromArray(cropArray, newDoc.context));
+      }
+    } catch(e){
+      console.warn('Vector crop not supported; continuing without crop', e);
+    }
+  }
+
+  newDoc.addPage(page);
+  const bytes = await newDoc.save();
+  return bytes;
+}
+
+async function exportPageToBytesRaster(st){
+  // Reuse the raster export logic but return bytes instead of saving
+  const pNum = st.idx;
+  const page = await pdfJsDoc.getPage(pNum);
+  const scaleFactor = 2.5 * (window.devicePixelRatio || 1);
+  const viewport = page.getViewport({ scale: scaleFactor });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  let cropCanvas = canvas;
+  if (st.crop && st.crop.mode !== 'none' && st.crop.box) {
+    const c = document.createElement('canvas');
+    const sx = Math.round(st.crop.box.l * canvas.width);
+    const sy = Math.round(st.crop.box.t * canvas.height);
+    const sw = Math.round(st.crop.box.w * canvas.width);
+    const sh = Math.round(st.crop.box.h * canvas.height);
+    c.width = sw; c.height = sh;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    cropCanvas = c;
+  }
+  const blob = await new Promise(res => cropCanvas.toBlob(res, 'image/png', 0.95));
+  const arrBuf = await blob.arrayBuffer();
+  const newDoc = await PDFLib.PDFDocument.create();
+  const img = await newDoc.embedPng(arrBuf);
+  const { width, height } = img.scale(1);
+  const pagePdf = newDoc.addPage([width, height]);
+  pagePdf.drawImage(img, { x:0, y:0, width, height });
+  if (st.rotation && st.rotation % 360 !== 0) pagePdf.setRotation(PDFLib.degrees(st.rotation));
+  return await newDoc.save();
+}
+
+// utilities
+function clearAll(){
+  for(const p of pageState) if(p.thumbnailUrl) URL.revokeObjectURL(p.thumbnailUrl);
+  pageState = []; pagesEl.innerHTML=''; info.innerHTML=''; setProgress(0); logStatus('Idle'); pdfJsDoc = null; originalPdfBytes = null; pdfLibDoc = null;
+}
+
 function resetState(){
   clearAll();
-  pagesEl.innerHTML = '';
-  info.innerHTML = '<div class="small">Loading PDF…</div>';
+  pagesEl.innerHTML=''; info.innerHTML='<div class="small">Loading PDF…</div>';
 }
 
-// helper: convert fetch URL to dataUrl
-async function fetchToDataURL(url){
-  const r = await fetch(url);
-  const b = await r.blob();
-  return await new Promise(res => {
-    const fr = new FileReader();
-    fr.onload = ()=>res(fr.result);
-    fr.readAsDataURL(b);
-  });
-}
-
-// Parse PDF from URL (optional feature): Accept ?url= param
+// Try to load from ?url= param (CORS permitting)
 async function loadFromUrlParam(){
   try {
     const params = new URLSearchParams(location.search);
     const url = params.get('url');
     if(!url) return;
     info.innerHTML = '<div class="small">Fetching PDF from URL…</div>';
-    const dataUrl = await fetchToDataURL(url);
-    // convert dataUrl to arrayBuffer
-    const res = await fetch(dataUrl);
+    const res = await fetch(url);
     const ab = await res.arrayBuffer();
-    const nameFromUrl = (new URL(url)).pathname.split('/').pop() || 'document.pdf';
-    currentFileName = nameFromUrl.replace(/\\.pdf$/i, '');
-    await loadAndRenderPDF(ab);
+    originalPdfBytes = ab;
+    await loadDocs(ab);
   } catch (e) {
     console.warn('URL load failed', e);
   }
 }
-
-// Try to load from ?url= param
 loadFromUrlParam();
 
 </script>
