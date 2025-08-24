@@ -1,41 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Splitter Tool</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Split PDF — Vector Export, Reorder, Rotate, Crop (Client-side)</title>
   <link rel="stylesheet" href="style.css">
-
-  <!-- Required Libraries -->
+  <!-- PDF.js for thumbnails -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <!-- pdf-lib for vector-preserving page copy -->
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- JSZip & FileSaver for batch zip exports -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
-  <h1>📑 PDF Splitter Tool</h1>
+  <div class="wrap">
+    <div class="header">
+      <h1>PDF Splitter Pro</h1>
+      <p class="subtitle">Advanced PDF manipulation with vector-preserving exports, page reordering, rotation, and intelligent cropping. All processing happens in your browser - your files never leave your device.</p>
+    </div>
 
-  <!-- Dropzone -->
-  <div id="dropzone" class="dropzone">📂 Drop PDF here or click to upload</div>
-  <input type="file" id="fileInput" accept="application/pdf" hidden />
+    <div class="uploader">
+      <label class="drop-zone" id="dropzone">
+        <div class="drop-text" id="dropText">Click or drop a PDF here</div>
+        <div class="drop-hint">Drag & drop your PDF file or click to browse</div>
+        <input id="fileInput" type="file" accept="application/pdf"/>
+      </label>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <button id="btnLoad">Load PDF</button>
-    <button id="btnExportAll">Export All (Vector)</button>
-    <button id="btnExportAllRaster">Export All (Raster)</button>
-    <button id="btnClear">Clear</button>
+      <div class="controls">
+        <button class="btn" id="btnLoad">📁 Load PDF</button>
+        <button class="btn" id="btnExportAll">🚀 Export All (Vector)</button>
+        <button class="btn" id="btnExportAllRaster">🖼️ Export All (Raster)</button>
+        <button class="btn danger" id="btnClear">🗑️ Clear</button>
+      </div>
+
+      <div class="progress-container">
+        <div class="progress">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="status" id="statusLine">Ready to process your PDF files</div>
+      </div>
+    </div>
+
+    <div id="info"></div>
+
+    <div id="pages" class="grid" aria-live="polite"></div>
+
+    <div class="footer">
+      <div class="feature-highlight">
+        <strong>✨ Features:</strong> Vector export preserves text & graphics quality • Drag & drop reordering • 90° rotation • Smart cropping with vector/raster modes • Batch export as ZIP • Full client-side processing
+      </div>
+      <p>Built with PDF.js and pdf-lib for professional-grade PDF manipulation in your browser.</p>
+    </div>
   </div>
-
-  <!-- Info + Progress -->
-  <div id="info"></div>
-  <div class="progress">
-    <div id="progressBar" class="progress-bar"></div>
-  </div>
-  <div id="statusLine"></div>
-
-  <!-- Pages Preview -->
-  <div id="pages" class="pages"></div>
 
   <script src="script.js"></script>
 </body>
