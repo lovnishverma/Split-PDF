@@ -5,90 +5,561 @@
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Split PDF — Vector Export, Reorder, Rotate, Crop (Client-side)</title>
 <style>
-  :root{--bg:#0b1220;--card:#0f172a;--muted:#9aa6b2;--text:#e6eef6;--accent:#38bdf8;--danger:#ef4444}
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,#07101a,#071822);color:var(--text);font-family:Inter,Segoe UI,Roboto,system-ui,Arial}
-  .wrap{max-width:1100px;margin:20px auto;padding:18px}
-  h1{margin:0 0 6px;font-size:1.4rem}
-  p.lead{margin:0 0 12px;color:var(--muted)}
-  .uploader{display:flex;gap:12px;align-items:center}
-  .drop{flex:1;border:2px dashed #1f2a36;border-radius:12px;padding:14px;background:var(--card);min-height:90px;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer}
-  .btn{background:var(--accent);color:#02151c;padding:8px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:600}
-  input[type=file]{display:none}
-  .controls{display:flex;gap:10px;align-items:center;margin-top:10px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(220px,1fr));gap:12px;margin-top:14px}
-  .card{background:linear-gradient(180deg,#071826,#08131c);border:1px solid #13303f;padding:10px;border-radius:10px}
-  .thumb{width:100%;height:200px;display:block;background:#081216;border-radius:8px;object-fit:contain}
-  .meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px}
-  .small{font-size:0.9rem;color:var(--muted)}
-  .actions{display:flex;gap:6px;align-items:center}
-  .pill{padding:6px 8px;border-radius:999px;background:#071a22;border:1px solid #123241;color:var(--muted)}
-  footer{margin-top:16px;color:var(--muted);font-size:0.9rem}
-  .progress{height:10px;background:#0b1720;border-radius:999px;overflow:hidden;margin-top:10px}
-  .bar{height:100%;background:linear-gradient(90deg,#38bdf8,#22c1c4);width:0%}
-  .note{margin-top:8px;color:var(--muted);font-size:0.9rem}
-  .controls-right{display:flex;gap:8px;align-items:center}
-  .status{font-size:0.9rem;color:var(--muted)}
-  .drag-handle{cursor:grab;padding:6px;border-radius:6px;background:#061218;border:1px solid #123241}
-  .rotate-btn{padding:6px;border-radius:6px;background:#081826;border:1px solid #123241;color:var(--muted)}
-  .danger{background:var(--danger);color:#fff}
-  .retry{background:#ffb3b3;color:#300}
-  .crop-overlay{position:absolute; border:2px dashed #22d3ee; pointer-events:none}
-  .controls-compact{display:flex;gap:6px;flex-wrap:wrap}
+  :root{
+    --bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --card-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+    --card-border: rgba(56, 189, 248, 0.2);
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+    --accent-hover: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    --danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --glass: rgba(15, 23, 42, 0.7);
+  }
+  
+  * { box-sizing: border-box; }
+  
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+  }
+  
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(56, 189, 248, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    min-height: 100vh;
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+    animation: fadeInDown 0.8s ease-out;
+  }
+  
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  
+  h1 {
+    margin: 0 0 1rem;
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #38bdf8 0%, #8b5cf6 50%, #10b981 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 20px rgba(56, 189, 248, 0.3);
+  }
+  
+  .subtitle {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  
+  .uploader {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+  }
+  
+  .drop-zone {
+    border: 2px dashed var(--card-border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(56, 189, 248, 0.05);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(56, 189, 248, 0.1), transparent);
+    transform: rotate(-45deg);
+    transition: transform 0.6s ease;
+    opacity: 0;
+  }
+  
+  .drop-zone:hover::before {
+    transform: rotate(-45deg) translate(100%, 100%);
+    opacity: 1;
+  }
+  
+  .drop-zone:hover {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.2);
+  }
+  
+  .drop-zone.dragover {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    transform: scale(1.02);
+  }
+  
+  .drop-text {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  
+  .drop-hint {
+    color: var(--text-muted);
+    font-size: 1rem;
+  }
+  
+  input[type=file] { display: none; }
+  
+  .controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+  }
+  
+  .btn {
+    background: var(--accent);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: inline-block;
+  }
+  
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+  }
+  
+  .btn:hover::before { left: 100%; }
+  
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(56, 189, 248, 0.4);
+    background: var(--accent-hover);
+  }
+  
+  .btn.danger {
+    background: var(--danger);
+  }
+  
+  .btn.danger:hover {
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+  }
+  
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .progress-container {
+    margin: 1.5rem 0;
+    position: relative;
+  }
+  
+  .progress {
+    height: 8px;
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 999px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+  
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8, #10b981, #8b5cf6);
+    background-size: 200% 100%;
+    border-radius: inherit;
+    transition: width 0.3s ease;
+    animation: shimmer 2s ease-in-out infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  .status {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+  
+  .info {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+    animation: scaleIn 0.5s ease-out;
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .page-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    animation: scaleIn 0.5s ease-out;
+  }
+  
+  .page-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #38bdf8, #10b981, #8b5cf6);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .page-card:hover::before {
+    opacity: 1;
+  }
+  
+  .page-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border-color: rgba(56, 189, 248, 0.4);
+  }
+  
+  .page-card.dragging {
+    opacity: 0.7;
+    transform: rotate(5deg) scale(1.05);
+    z-index: 1000;
+  }
+  
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .page-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .drag-handle {
+    cursor: grab;
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    transition: all 0.3s ease;
+  }
+  
+  .drag-handle:hover {
+    background: rgba(56, 189, 248, 0.2);
+    transform: scale(1.1);
+  }
+  
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+  
+  .page-title {
+    font-weight: 600;
+    color: var(--text);
+  }
+  
+  .page-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  
+  .page-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .icon-btn {
+    padding: 0.5rem;
+    border-radius: 8px;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+  }
+  
+  .icon-btn:hover {
+    background: rgba(56, 189, 248, 0.1);
+    color: #38bdf8;
+    transform: scale(1.1);
+  }
+  
+  .thumbnail {
+    width: 100%;
+    height: 200px;
+    border-radius: 12px;
+    object-fit: contain;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+  }
+  
+  .page-card:hover .thumbnail {
+    transform: scale(1.05);
+  }
+  
+  .page-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    gap: 1rem;
+  }
+  
+  .meta-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  
+  .page-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+  
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeInUp 0.3s ease-out;
+  }
+  
+  .modal-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 2rem;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--card-border);
+  }
+  
+  .crop-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .form-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  
+  .form-input, .form-select {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--card-border);
+    background: rgba(30, 41, 59, 0.6);
+    color: var(--text);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+  }
+  
+  .footer {
+    text-align: center;
+    margin-top: 3rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--card-border);
+    color: var(--text-muted);
+    animation: fadeInUp 0.8s ease-out 0.6s both;
+  }
+  
+  .feature-highlight {
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1rem 0;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .wrap { padding: 1rem; }
+    h1 { font-size: 2rem; }
+    .controls { flex-direction: column; align-items: stretch; }
+    .btn { width: 100%; text-align: center; }
+    .grid { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+    .page-actions { align-self: stretch; justify-content: space-around; }
+  }
 </style>
 
 <!-- PDF.js for thumbnails -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.min.js"></script>
 <!-- pdf-lib for vector-preserving page copy -->
-<script src="https://cdn.jsdelivr.net/npm/pdf-lib@2.22.0/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <!-- JSZip & FileSaver for batch zip exports -->
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
 <div class="wrap">
-  <h1>Split PDF — Advanced</h1>
-  <p class="lead">Load a PDF, reorder pages, rotate, optionally crop (vector or raster fallback), and export vector-preserved single-page PDFs or a zipped batch. Fully client-side.</p>
+  <div class="header">
+    <h1>PDF Splitter Pro</h1>
+    <p class="subtitle">Advanced PDF manipulation with vector-preserving exports, page reordering, rotation, and intelligent cropping. All processing happens in your browser - your files never leave your device.</p>
+  </div>
 
   <div class="uploader">
-    <label class="drop" id="dropzone">
-      <div style="text-align:center">
-        <strong id="dropText">Click or drop a PDF here</strong>
-        <div class="note">Supported: .pdf — Drag & drop or use the file picker</div>
-      </div>
+    <label class="drop-zone" id="dropzone">
+      <div class="drop-text" id="dropText">Click or drop a PDF here</div>
+      <div class="drop-hint">Drag & drop your PDF file or click to browse</div>
       <input id="fileInput" type="file" accept="application/pdf"/>
     </label>
 
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <div class="controls">
-        <button class="btn" id="btnLoad">Load PDF</button>
-        <div class="controls-right">
-          <button class="btn" id="btnExportAll">Export All (vector)</button>
-          <button class="btn" id="btnExportAllRaster">Export All (raster-crop fallback)</button>
-          <button class="btn" id="btnClear">Clear</button>
-        </div>
+    <div class="controls">
+      <button class="btn" id="btnLoad">📁 Load PDF</button>
+      <button class="btn" id="btnExportAll">🚀 Export All (Vector)</button>
+      <button class="btn" id="btnExportAllRaster">🖼️ Export All (Raster)</button>
+      <button class="btn danger" id="btnClear">🗑️ Clear</button>
+    </div>
+
+    <div class="progress-container">
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
       </div>
-      <div class="progress" title="progress"><div class="bar" id="progressBar"></div></div>
-      <div class="status" id="statusLine">Idle.</div>
+      <div class="status" id="statusLine">Ready to process your PDF files</div>
     </div>
   </div>
 
-  <div id="info" style="margin-top:12px"></div>
+  <div id="info"></div>
 
   <div id="pages" class="grid" aria-live="polite"></div>
 
-  <footer>
-    <div>Vector export uses <strong>pdf-lib</strong> page copying (preserves vectors & text). Crop attempts to set PDF crop box; if you choose raster crop, the page will be rasterized and embedded (lossy).</div>
-  </footer>
+  <div class="footer">
+    <div class="feature-highlight">
+      <strong>✨ Features:</strong> Vector export preserves text & graphics quality • Drag & drop reordering • 90° rotation • Smart cropping with vector/raster modes • Batch export as ZIP • Full client-side processing
+    </div>
+    <p>Built with PDF.js and pdf-lib for professional-grade PDF manipulation in your browser.</p>
+  </div>
 </div>
 
 <script>
-/* Advanced splitter with:
-   - vector-preserved export via pdf-lib.copyPages
-   - drag & drop reorder
-   - rotate (applied to exported page)
-   - crop (vector-best-effort via cropBox, raster fallback)
-   - progress + retry
-*/
+/* Advanced PDF splitter with enhanced UI and better error handling */
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.8.162/pdf.worker.min.js';
 
@@ -103,449 +574,369 @@ const info = document.getElementById('info');
 const progressBar = document.getElementById('progressBar');
 const statusLine = document.getElementById('statusLine');
 
-let pdfJsDoc = null;         // PDF.js document (for thumbnails, size)
-let originalPdfBytes = null; // ArrayBuffer of original PDF
-let pdfLibDoc = null;        // pdf-lib loaded doc (PDFDocument)
-let pageState = [];          // array of { idx: originalIndex (1-based), rotation: 0|90|180|270, crop: {mode:'none'|'vector'|'raster', box:{x,y,w,h}}, thumbnailUrl, failed:false }
+let pdfJsDoc = null;
+let originalPdfBytes = null;
+let pdfLibDoc = null;
+let pageState = [];
 
-function setProgress(p){
-  progressBar.style.width = Math.round(p*100) + '%';
+function setProgress(p) {
+  progressBar.style.width = Math.round(p * 100) + '%';
 }
-function logStatus(s){ statusLine.textContent = s; }
 
-function human(n){ return n.toLocaleString() }
+function logStatus(s) { 
+  statusLine.textContent = s; 
+}
 
-// Drag & drop handlers
-dropzone.addEventListener('click', ()=>fileInput.click());
-dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.style.borderColor = '#2aa6c7'; });
-dropzone.addEventListener('dragleave', ()=>{ dropzone.style.borderColor = '#1f2a36'; });
-dropzone.addEventListener('drop', (e)=>{ e.preventDefault(); dropzone.style.borderColor = '#1f2a36'; const f = e.dataTransfer.files?.[0]; if(f) handleFile(f); });
+function human(n) { 
+  return n.toLocaleString(); 
+}
 
-fileInput.addEventListener('change', (e)=>{ const f = e.target.files?.[0]; if(f) handleFile(f); });
-btnLoad.addEventListener('click', ()=>fileInput.click());
+// Enhanced drag & drop handlers
+dropzone.addEventListener('click', () => fileInput.click());
+
+dropzone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropzone.classList.add('dragover');
+});
+
+dropzone.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+});
+
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  const file = e.dataTransfer.files?.[0];
+  if (file) handleFile(file);
+});
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (file) handleFile(file);
+});
+
+btnLoad.addEventListener('click', () => fileInput.click());
 btnClear.addEventListener('click', clearAll);
-btnExportAll.addEventListener('click', ()=>exportAll({ rasterFallback:false }));
-btnExportAllRaster.addEventListener('click', ()=>exportAll({ rasterFallback:true }));
+btnExportAll.addEventListener('click', () => exportAll({ rasterFallback: false }));
+btnExportAllRaster.addEventListener('click', () => exportAll({ rasterFallback: true }));
 
-async function handleFile(file){
+async function handleFile(file) {
   resetState();
   if (!file.type || !file.type.includes('pdf')) {
     alert('Please upload a PDF file.');
     return;
   }
-  info.innerHTML = `<div class="small">Loaded: <strong>${file.name}</strong> — ${human(file.size)} bytes</div>`;
+  
+  info.innerHTML = `
+    <div class="info">
+      <strong>📄 ${file.name}</strong> • ${human(file.size)} bytes
+    </div>
+  `;
+  
   originalPdfBytes = await file.arrayBuffer();
   await loadDocs(originalPdfBytes);
 }
 
-// load both PDF.js and pdf-lib versions
-async function loadDocs(arrayBuffer){
+async function loadDocs(arrayBuffer) {
   setProgress(0);
-  logStatus('Loading PDF (thumbnails)...');
-  const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
-  pdfJsDoc = await loadingTask.promise;
-  info.innerHTML += `<div class="small"> — Pages: <strong>${pdfJsDoc.numPages}</strong></div>`;
-  // Load pdf-lib doc for vector copy
-  logStatus('Preparing internal PDF for vector export...');
-  pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-  // build page state
-  pageState = [];
-  for(let i=1;i<=pdfJsDoc.numPages;i++){
-    pageState.push({ idx:i, rotation:0, crop:{mode:'none', box:null}, thumbnailUrl:null, failed:false });
+  logStatus('Loading PDF and generating thumbnails...');
+  
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    pdfJsDoc = await loadingTask.promise;
+    
+    info.innerHTML += `
+      <div class="info">
+        <strong>📑 ${pdfJsDoc.numPages} pages</strong> loaded successfully
+      </div>
+    `;
+    
+    logStatus('Preparing PDF for vector export...');
+    pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+    
+    // Initialize page state
+    pageState = [];
+    for (let i = 1; i <= pdfJsDoc.numPages; i++) {
+      pageState.push({
+        idx: i,
+        rotation: 0,
+        crop: { mode: 'none', box: null },
+        thumbnailUrl: null,
+        failed: false
+      });
+    }
+    
+    await renderThumbnails();
+    setProgress(1);
+    logStatus('Ready! Reorder, rotate, or crop pages, then export.');
+  } catch (error) {
+    console.error('Error loading PDF:', error);
+    logStatus('Error loading PDF. Please try a different file.');
   }
-  // render thumbnails sequentially
-  await renderThumbnails();
-  setProgress(1);
-  logStatus('Ready. Reorder, rotate or crop pages then export.');
 }
 
-// Render thumbnails for each page (sequential to avoid memory spike)
-async function renderThumbnails(){
+async function renderThumbnails() {
   pagesEl.innerHTML = '';
-  for(let i=0;i<pageState.length;i++){
-    setProgress(i/pageState.length);
+  
+  for (let i = 0; i < pageState.length; i++) {
+    setProgress(i / pageState.length);
     const pNum = pageState[i].idx;
-    const page = await pdfJsDoc.getPage(pNum);
-    const viewport = page.getViewport({ scale: 1.0 });
-    // target width ~ 600px max to keep file size reasonable
-    const scale = Math.min(1.2, 220 / viewport.width * (viewport.width/viewport.width));
-    const scaled = page.getViewport({ scale: scale * (window.devicePixelRatio||1) * 0.9 });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = Math.floor(scaled.width);
-    canvas.height = Math.floor(scaled.height);
-    // white background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport: scaled }).promise;
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    const url = URL.createObjectURL(blob);
-    pageState[i].thumbnailUrl = url;
-    renderPageCard(i); // pass current index in pageState array
-    await new Promise(r=>setTimeout(r,25));
+    
+    try {
+      const page = await pdfJsDoc.getPage(pNum);
+      const viewport = page.getViewport({ scale: 1.0 });
+      const scale = Math.min(1.5, 280 / viewport.width);
+      const scaledViewport = page.getViewport({ scale: scale * (window.devicePixelRatio || 1) });
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = Math.floor(scaledViewport.width);
+      canvas.height = Math.floor(scaledViewport.height);
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+      
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.9));
+      const url = URL.createObjectURL(blob);
+      pageState[i].thumbnailUrl = url;
+      
+      renderPageCard(i);
+      await new Promise(r => setTimeout(r, 50)); // Smooth animation
+    } catch (error) {
+      console.error(`Error rendering page ${pNum}:`, error);
+    }
   }
 }
 
-// Render a page card (index in pageState)
-function renderPageCard(stateIndex){
+function renderPageCard(stateIndex) {
   const st = pageState[stateIndex];
   const card = document.createElement('div');
-  card.className = 'card';
+  card.className = 'page-card';
   card.dataset.stateIndex = stateIndex;
   card.draggable = true;
 
-  // drag handle + position label
-  const topRow = document.createElement('div');
-  topRow.style.display='flex'; topRow.style.justifyContent='space-between'; topRow.style.alignItems='center';
-  const leftGroup = document.createElement('div'); leftGroup.style.display='flex'; leftGroup.style.alignItems='center'; leftGroup.style.gap='8px';
-  const handle = document.createElement('div'); handle.className='drag-handle'; handle.title='Drag to reorder'; handle.textContent='☰';
-  leftGroup.appendChild(handle);
-  const title = document.createElement('div'); title.innerHTML = `<div class="small">Page <strong>${st.idx}</strong></div><div class="small">Position <strong>${stateIndex+1}</strong></div>`;
-  leftGroup.appendChild(title);
-  topRow.appendChild(leftGroup);
+  card.innerHTML = `
+    <div class="page-header">
+      <div class="page-info">
+        <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+        <div>
+          <div class="page-title">Page ${st.idx}</div>
+          <div class="page-subtitle">Position ${stateIndex + 1}</div>
+        </div>
+      </div>
+      <div class="page-actions">
+        <button class="icon-btn" title="Rotate 90°" onclick="rotatePage(${stateIndex})">🔄</button>
+        <button class="icon-btn" title="Crop page" onclick="openCropModal(${stateIndex})">✂️</button>
+        <button class="icon-btn" title="Remove page" onclick="removePage(${stateIndex})" style="color: #ef4444;">🗑️</button>
+      </div>
+    </div>
+    <img class="thumbnail" src="${st.thumbnailUrl}" alt="Page ${st.idx}" style="transform: rotate(${st.rotation}deg);">
+    <div class="page-meta">
+      <div class="meta-info">
+        <div>Original: <strong>${st.idx}</strong></div>
+        <div>Rotation: <strong>${st.rotation}°</strong></div>
+        <div>Crop: <strong>${st.crop.mode}</strong></div>
+      </div>
+      <div class="page-controls">
+        <button class="btn btn-sm" onclick="exportSingle(${stateIndex}, {rasterFallback: false})">📄 Vector</button>
+        <button class="btn btn-sm" onclick="exportSingle(${stateIndex}, {rasterFallback: true})">🖼️ Raster</button>
+      </div>
+    </div>
+  `;
 
-  const rightGroup = document.createElement('div'); rightGroup.style.display='flex'; rightGroup.style.gap='6px';
-  const rotateBtn = document.createElement('button'); rotateBtn.className='rotate-btn'; rotateBtn.title='Rotate 90° clockwise'; rotateBtn.textContent='⟳';
-  rotateBtn.addEventListener('click', ()=>{ st.rotation = (st.rotation + 90) % 360; updateCardRotation(card, st.rotation); });
-  rightGroup.appendChild(rotateBtn);
-  const cropBtn = document.createElement('button'); cropBtn.className='rotate-btn'; cropBtn.title='Crop (open crop modal)'; cropBtn.textContent='✂';
-  cropBtn.addEventListener('click', ()=>openCropModal(stateIndex));
-  rightGroup.appendChild(cropBtn);
-  const removeBtn = document.createElement('button'); removeBtn.className='rotate-btn'; removeBtn.title='Remove page'; removeBtn.textContent='✖';
-  removeBtn.addEventListener('click', ()=>{ if(confirm('Remove this page from output?')){ pageState.splice(stateIndex,1); refreshAllCards(); }});
-  rightGroup.appendChild(removeBtn);
-
-  topRow.appendChild(rightGroup);
-  card.appendChild(topRow);
-
-  const img = document.createElement('img'); img.className='thumb'; img.src = st.thumbnailUrl; img.alt = `Page ${st.idx}`;
-  card.appendChild(img);
-
-  const meta = document.createElement('div'); meta.className='meta';
-  const left = document.createElement('div'); left.innerHTML = `<div class="small">Orig: <strong>${st.idx}</strong></div><div class="small">Rot: <strong>${st.rotation}°</strong></div>`;
-  const actions = document.createElement('div'); actions.className='actions';
-  const downloadBtn = document.createElement('button'); downloadBtn.className='btn'; downloadBtn.textContent='Export Page (vector)';
-  downloadBtn.addEventListener('click', ()=>exportSingle(stateIndex, { rasterFallback:false }));
-  const downloadRasterBtn = document.createElement('button'); downloadRasterBtn.className='btn'; downloadRasterBtn.textContent='Export (raster crop)';
-  downloadRasterBtn.addEventListener('click', ()=>exportSingle(stateIndex, { rasterFallback:true }));
-  const retryBtn = document.createElement('button'); retryBtn.className='btn retry'; retryBtn.style.display='none'; retryBtn.textContent='Retry';
-  retryBtn.addEventListener('click', ()=>exportSingle(stateIndex, { rasterFallback:false }));
-  actions.appendChild(downloadBtn); actions.appendChild(downloadRasterBtn); actions.appendChild(retryBtn);
-
-  meta.appendChild(left); meta.appendChild(actions);
-  card.appendChild(meta);
-
-  // attach drag/drop events using dataset stateIndex
-  card.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData('text/plain', String(stateIndex)); card.style.opacity=0.5; });
-  card.addEventListener('dragend', ()=>{ card.style.opacity=1; });
-  card.addEventListener('dragover', (e)=>{ e.preventDefault(); card.style.outline='2px dashed #2aa6c7'; });
-  card.addEventListener('dragleave', ()=>{ card.style.outline=''; });
-  card.addEventListener('drop', (e)=>{ e.preventDefault(); card.style.outline=''; const from = Number(e.dataTransfer.getData('text/plain')); const to = Number(card.dataset.stateIndex); if(!Number.isFinite(from)) return; moveState(from,to); });
-
-  // update rotation text when changed
-  updateCardRotation(card, st.rotation);
-
-  // store card reference
+  // Add drag and drop event listeners
+  addDragDropListeners(card, stateIndex);
+  
   pagesEl.appendChild(card);
-  refreshCardIndices();
 }
 
-function updateCardRotation(card, rotation){
-  // find rot text element
-  const smalls = card.querySelectorAll('.small');
-  if (smalls[1]) smalls[1].innerHTML = `Rot: <strong>${rotation}°</strong>`;
-  // indicate visually (CSS transform)
-  const img = card.querySelector('.thumb');
-  if(img) img.style.transform = `rotate(${rotation}deg)`;
+function addDragDropListeners(card, stateIndex) {
+  card.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', String(stateIndex));
+    card.classList.add('dragging');
+  });
+
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+  });
+
+  card.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    card.style.borderColor = '#38bdf8';
+  });
+
+  card.addEventListener('dragleave', () => {
+    card.style.borderColor = '';
+  });
+
+  card.addEventListener('drop', (e) => {
+    e.preventDefault();
+    card.style.borderColor = '';
+    const fromIndex = Number(e.dataTransfer.getData('text/plain'));
+    const toIndex = Number(card.dataset.stateIndex);
+    
+    if (!Number.isFinite(fromIndex) || fromIndex === toIndex) return;
+    
+    moveState(fromIndex, toIndex);
+  });
 }
 
-// Move pageState[from] to position to (before/after behavior)
-function moveState(from, to){
-  if (from === to) return;
-  const item = pageState.splice(from,1)[0];
-  pageState.splice(to,0,item);
+function rotatePage(stateIndex) {
+  const st = pageState[stateIndex];
+  st.rotation = (st.rotation + 90) % 360;
   refreshAllCards();
 }
 
-// refresh all cards UI after changes
-function refreshAllCards(){
-  // revoke old thumbnails then re-render list
+function removePage(stateIndex) {
+  if (confirm('Remove this page from the output?')) {
+    pageState.splice(stateIndex, 1);
+    refreshAllCards();
+  }
+}
+
+function moveState(from, to) {
+  if (from === to) return;
+  const item = pageState.splice(from, 1)[0];
+  pageState.splice(to, 0, item);
+  refreshAllCards();
+}
+
+function refreshAllCards() {
   pagesEl.innerHTML = '';
-  for(let i=0;i<pageState.length;i++) renderPageCard(i);
-  refreshCardIndices();
+  for (let i = 0; i < pageState.length; i++) {
+    renderPageCard(i);
+  }
 }
 
-function refreshCardIndices(){
-  // reassign data-stateIndex for each card and update position text
-  const cards = pagesEl.querySelectorAll('.card');
-  cards.forEach((c, idx) => {
-    c.dataset.stateIndex = idx;
-    const posSmall = c.querySelector('.small strong') // rough; we'll recalc simple
-    // update position text element: find the element showing position
-    const titleDiv = c.querySelector('div > div > div:nth-child(2)');
-    if (titleDiv) {
-      titleDiv.innerHTML = `Position <strong>${idx+1}</strong>`;
-    }
-  });
-}
-
-// open crop modal: simple cropping UI overlay on thumbnail with numeric entry and "vector vs raster" choice
-function openCropModal(stateIndex){
+function openCropModal(stateIndex) {
   const st = pageState[stateIndex];
-  // create a lightweight modal
+  
   const modal = document.createElement('div');
-  Object.assign(modal.style, { position:'fixed', inset:0, background:'rgba(3,6,12,0.75)', display:'grid', placeItems:'center', zIndex:9999 });
-  const box = document.createElement('div'); Object.assign(box.style, { width:'90%', maxWidth:'900px', background:'#071826', borderRadius:'10px', padding:'12px', border:'1px solid #123241' });
-  box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center">
-    <div><strong>Crop — Page ${st.idx}</strong><div class="small">Pick mode: vector (crop box) or raster (pixel crop)</div></div>
-    <div><button id="closeCrop">Close</button></div></div><hr style="border-color:#123241;margin:8px 0">`;
-
-  // show thumbnail + overlay canvas to draw rect (simple)
-  const thumbWrap = document.createElement('div'); thumbWrap.style.position='relative'; thumbWrap.style.display='flex'; thumbWrap.style.justifyContent='center';
-  const img = document.createElement('img'); img.src = st.thumbnailUrl; img.style.maxWidth='100%'; img.style.borderRadius='6px'; img.style.background='#fff';
-  thumbWrap.appendChild(img);
-  box.appendChild(thumbWrap);
-
-  // numeric input controls for crop coordinates in PDF units (approx), we will map relative values
-  const controls = document.createElement('div'); controls.style.marginTop='10px';
-  controls.innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <label class="small">Mode:
-        <select id="cropMode"><option value="none">None</option><option value="vector">Vector (crop box)</option><option value="raster">Raster (pixel crop)</option></select>
-      </label>
-      <label class="small">Left % <input id="cropL" type="number" min="0" max="100" value="${st.crop.box? (st.crop.box.l*100).toFixed(1) : 0 }" style="width:80px"/></label>
-      <label class="small">Top % <input id="cropT" type="number" min="0" max="100" value="${st.crop.box? (st.crop.box.t*100).toFixed(1) : 0 }" style="width:80px"/></label>
-      <label class="small">Width % <input id="cropW" type="number" min="1" max="100" value="${st.crop.box? (st.crop.box.w*100).toFixed(1) : 100 }" style="width:80px"/></label>
-      <label class="small">Height % <input id="cropH" type="number" min="1" max="100" value="${st.crop.box? (st.crop.box.h*100).toFixed(1) : 100 }" style="width:80px"/></label>
-    </div>
-    <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
-      <button id="applyCrop" class="btn">Apply</button>
-      <button id="cancelCrop" class="btn">Cancel</button>
+  modal.className = 'modal';
+  
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h3>✂️ Crop Page ${st.idx}</h3>
+          <p class="form-label">Choose crop mode and adjust boundaries</p>
+        </div>
+        <button class="icon-btn" onclick="this.closest('.modal').remove()">✖️</button>
+      </div>
+      
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <img src="${st.thumbnailUrl}" style="max-width: 100%; max-height: 300px; border-radius: 8px; background: white;">
+      </div>
+      
+      <div class="crop-controls">
+        <div class="form-group">
+          <label class="form-label">Crop Mode</label>
+          <select class="form-select" id="cropMode">
+            <option value="none" ${st.crop.mode === 'none' ? 'selected' : ''}>No Crop</option>
+            <option value="vector" ${st.crop.mode === 'vector' ? 'selected' : ''}>Vector (Crop Box)</option>
+            <option value="raster" ${st.crop.mode === 'raster' ? 'selected' : ''}>Raster (Pixel Crop)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Left Margin (%)</label>
+          <input class="form-input" id="cropL" type="number" min="0" max="100" value="${st.crop.box ? (st.crop.box.l * 100).toFixed(1) : 0}">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Top Margin (%)</label>
+          <input class="form-input" id="cropT" type="number" min="0" max="100" value="${st.crop.box ? (st.crop.box.t * 100).toFixed(1) : 0}">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Width (%)</label>
+          <input class="form-input" id="cropW" type="number" min="1" max="100" value="${st.crop.box ? (st.crop.box.w * 100).toFixed(1) : 100}">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Height (%)</label>
+          <input class="form-input" id="cropH" type="number" min="1" max="100" value="${st.crop.box ? (st.crop.box.h * 100).toFixed(1) : 100}">
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+        <button class="btn" onclick="applyCrop(${stateIndex}, this.closest('.modal'))">Apply Crop</button>
+        <button class="btn danger" onclick="this.closest('.modal').remove()">Cancel</button>
+      </div>
     </div>
   `;
-  box.appendChild(controls);
-  modal.appendChild(box);
+  
   document.body.appendChild(modal);
-
-  // close handlers
-  modal.querySelector('#closeCrop').addEventListener('click', ()=>modal.remove());
-  modal.querySelector('#cancelCrop').addEventListener('click', ()=>modal.remove());
-  modal.querySelector('#applyCrop').addEventListener('click', ()=>{
-    const mode = modal.querySelector('#cropMode').value;
-    const l = Number(modal.querySelector('#cropL').value)/100 || 0;
-    const t = Number(modal.querySelector('#cropT').value)/100 || 0;
-    const w = Number(modal.querySelector('#cropW').value)/100 || 1;
-    const h = Number(modal.querySelector('#cropH').value)/100 || 1;
-    if (mode === 'none') {
-      st.crop.mode = 'none'; st.crop.box = null;
-    } else {
-      st.crop.mode = mode; st.crop.box = { l: clamp01(l), t: clamp01(t), w: clamp01(w), h: clamp01(h) };
-    }
-    modal.remove();
-    refreshAllCards();
-  });
-
-  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 }
 
-// Export single page by stateIndex
-async function exportSingle(stateIndex, options = { rasterFallback:false }){
+function applyCrop(stateIndex, modal) {
+  const st = pageState[stateIndex];
+  const mode = modal.querySelector('#cropMode').value;
+  const l = Number(modal.querySelector('#cropL').value) / 100 || 0;
+  const t = Number(modal.querySelector('#cropT').value) / 100 || 0;
+  const w = Number(modal.querySelector('#cropW').value) / 100 || 1;
+  const h = Number(modal.querySelector('#cropH').value) / 100 || 1;
+  
+  if (mode === 'none') {
+    st.crop.mode = 'none';
+    st.crop.box = null;
+  } else {
+    st.crop.mode = mode;
+    st.crop.box = {
+      l: Math.max(0, Math.min(1, l)),
+      t: Math.max(0, Math.min(1, t)),
+      w: Math.max(0.01, Math.min(1, w)),
+      h: Math.max(0.01, Math.min(1, h))
+    };
+  }
+  
+  modal.remove();
+  refreshAllCards();
+}
+
+async function exportSingle(stateIndex, options = { rasterFallback: false }) {
   const st = pageState[stateIndex];
   const name = `page-${st.idx}`;
-  try{
+  
+  try {
     logStatus(`Exporting page ${st.idx}...`);
     setProgress(0);
-    // Try vector copy first (preserve vectors)
+    
     if (st.crop.mode === 'raster' || options.rasterFallback) {
-      // Use raster path: render page fully at high res, apply crop, embed image into new PDF
       await exportSingleRaster(st, name);
     } else {
-      // Attempt vector export (preserve content)
       await exportSingleVector(st, name);
     }
-    logStatus(`Exported ${name}.pdf`);
+    
+    logStatus(`✅ Exported ${name}.pdf successfully`);
     setProgress(1);
-  }catch(err){
-    console.error(err);
+  } catch (err) {
+    console.error('Export error:', err);
     st.failed = true;
-    logStatus(`Export failed for page ${st.idx}: ${err.message || err}`);
-    // show retry button on the corresponding card
-    const card = findCardByStateIndex(stateIndex);
-    if (card) {
-      const retryBtn = card.querySelector('.retry');
-      if (retryBtn) retryBtn.style.display = 'inline-block';
-    }
-    // If vector export failed and raster fallback allowed, attempt raster export
+    logStatus(`❌ Export failed for page ${st.idx}: ${err.message || err}`);
+    
     if (!options.rasterFallback) {
-      const fallback = confirm('Vector export failed for this page. Try raster fallback? (image-based export will be used)');
-      if (fallback) await exportSingle(stateIndex, { rasterFallback:true });
+      const fallback = confirm('Vector export failed. Try raster fallback?');
+      if (fallback) {
+        await exportSingle(stateIndex, { rasterFallback: true });
+      }
     }
   }
 }
 
-function findCardByStateIndex(stateIndex){
-  return pagesEl.querySelector(`.card[data-state-index="${stateIndex}"]`);
-}
-
-// Vector export: copy page from original pdf-lib document and apply rotation/crop
-async function exportSingleVector(st, filePrefix){
-  // copyPages with pdf-lib; this preserves vector content
-  const srcDoc = await PDFLib.PDFDocument.load(originalPdfBytes);
-  const [copied] = await srcDoc.copyPages(srcDoc, [st.idx - 1]); // NOTE: using same doc for simplicity
-  // But pdf-lib expects copy from one doc to target doc; better approach:
-  // We'll load original as pdf-lib, create a new pdf-lib doc and copyPages from original
+async function exportSingleVector(st, filePrefix) {
   const original = await PDFLib.PDFDocument.load(originalPdfBytes);
   const newDoc = await PDFLib.PDFDocument.create();
   const copiedPages = await newDoc.copyPages(original, [st.idx - 1]);
   const page = copiedPages[0];
-  // Apply rotation if needed
+  
   if (st.rotation && st.rotation % 360 !== 0) {
     page.setRotation(PDFLib.degrees(st.rotation));
   }
-  // Apply vector crop by setting crop box if requested (best-effort)
-  if (st.crop && st.crop.mode === 'vector' && st.crop.box) {
-    // Crop box coordinates: we'll map percentage to page size
-    const { width, height } = page.getSize();
-    const l = st.crop.box.l * width;
-    const t = st.crop.box.t * height;
-    const w = st.crop.box.w * width;
-    const h = st.crop.box.h * height;
-    // setCropBox isn't in all pdf-lib versions publicly; we'll attempt via setTrimBox / setCropBox via page.node
-    try {
-      // prefer official api if available
-      if (typeof page.setCropBox === 'function') {
-        page.setCropBox(l, height - (t + h), l + w, height - t);
-      } else {
-        // low-level manipulation: set CropBox array on the page dictionary
-        const cropArray = [PDFLib.PDFNumber.of(l), PDFLib.PDFNumber.of(height - (t + h)), PDFLib.PDFNumber.of(l + w), PDFLib.PDFNumber.of(height - t)];
-        page.node.set(PDFLib.PDFName.of('CropBox'), PDFLib.PDFArray.fromArray(cropArray, newDoc.context));
-      }
-    } catch(e){
-      console.warn('Vector crop not fully supported by pdf-lib in this environment. Using page as-is.', e);
-      // We continue — the page will be exported without crop (viewer may still support CropBox if set)
-    }
-  }
-  newDoc.addPage(page);
-  const pdfBytes = await newDoc.save();
-  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-  saveAs(blob, `${filePrefix}.pdf`);
-}
-
-// Raster export: render page to high-res canvas, crop in pixels, embed image into PDF
-async function exportSingleRaster(st, filePrefix){
-  // Render the full page at a high scale (device pixel ratio * 2)
-  const pNum = st.idx;
-  const page = await pdfJsDoc.getPage(pNum);
-  // determine scale for high quality (e.g., 2.5)
-  const scaleFactor = 2.5 * (window.devicePixelRatio || 1);
-  const viewport = page.getViewport({ scale: scaleFactor });
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.floor(viewport.width);
-  canvas.height = Math.floor(viewport.height);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0,0,canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport }).promise;
-
-  // apply pixel crop if requested
-  let cropImageCanvas = canvas;
-  if (st.crop && st.crop.mode !== 'none' && st.crop.box) {
-    const c = document.createElement('canvas');
-    const sx = Math.round(st.crop.box.l * canvas.width);
-    const sy = Math.round(st.crop.box.t * canvas.height);
-    const sw = Math.round(st.crop.box.w * canvas.width);
-    const sh = Math.round(st.crop.box.h * canvas.height);
-    c.width = sw; c.height = sh;
-    const cctx = c.getContext('2d');
-    cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-    cropImageCanvas = c;
-  }
-
-  // convert to blob
-  const blob = await new Promise(res => cropImageCanvas.toBlob(res, 'image/png', 0.95));
-  const arrBuf = await blob.arrayBuffer();
-  // embed in new PDF
-  const newDoc = await PDFLib.PDFDocument.create();
-  const img = await newDoc.embedPng(arrBuf);
-  const { width, height } = img.scale(1);
-  const pagePdf = newDoc.addPage([width, height]);
-  pagePdf.drawImage(img, { x:0, y:0, width, height });
-  // apply rotation if needed (rotation of canvas embedded image)
-  if (st.rotation && st.rotation % 360 !== 0) {
-    pagePdf.setRotation(PDFLib.degrees(st.rotation));
-  }
-  const pdfBytes = await newDoc.save();
-  saveAs(new Blob([pdfBytes], {type:'application/pdf'}), `${filePrefix}-raster.pdf`);
-}
-
-// Export all selected pages as vector-preserved single-page PDFs & zip them
-async function exportAll({ rasterFallback=false } = {}) {
-  if (!pdfLibDoc) { alert('No PDF loaded'); return; }
-  if (pageState.length === 0) { alert('No pages'); return; }
-  btnExportAll.disabled = true;
-  btnExportAllRaster.disabled = true;
-  btnClear.disabled = true;
-  setProgress(0);
-  logStatus('Generating pages...');
-  const zip = new JSZip();
-  const total = pageState.length;
-  let completed = 0;
-  const failedIndices = [];
-  for (let i = 0; i < pageState.length; i++) {
-    const st = pageState[i];
-    try {
-      // Try vector export
-      try {
-        const pdfBytes = await exportPageToBytesVector(st);
-        zip.file(`page-${st.idx}.pdf`, pdfBytes);
-      } catch (ve) {
-        console.warn('Vector export failed, trying raster fallback if enabled', ve);
-        if (rasterFallback) {
-          const pdfBytes = await exportPageToBytesRaster(st);
-          zip.file(`page-${st.idx}-raster.pdf`, pdfBytes);
-        } else {
-          throw ve;
-        }
-      }
-      completed++;
-      setProgress(completed/total);
-      logStatus(`Processed ${completed}/${total}`);
-    } catch (err) {
-      console.error('Page failed', st.idx, err);
-      st.failed = true;
-      failedIndices.push(i);
-      // attach retry UI later
-    }
-    // small delay for UI responsiveness
-    await new Promise(r=>setTimeout(r,40));
-  }
-
-  if (failedIndices.length > 0) {
-    logStatus(`Completed with ${failedIndices.length} failed pages. You may retry them individually.`);
-  } else {
-    logStatus('All pages processed. Preparing ZIP...');
-  }
-  const content = await zip.generateAsync({ type: 'blob' }, (meta) => {
-    setProgress(meta.percent / 100);
-  });
-  saveAs(content, `pages-${Date.now()}.zip`);
-  btnExportAll.disabled = false;
-  btnExportAllRaster.disabled = false;
-  btnClear.disabled = false;
-  refreshAllCards(); // show retry buttons if any failed
-}
-
-async function exportPageToBytesVector(st){
-  // create new pdf-lib doc and copy the original page into it
-  const original = await PDFLib.PDFDocument.load(originalPdfBytes);
-  const newDoc = await PDFLib.PDFDocument.create();
-  const copiedPages = await newDoc.copyPages(original, [st.idx - 1]);
-  const page = copiedPages[0];
-
-  // Rotation applied
-  if (st.rotation && st.rotation % 360 !== 0) page.setRotation(PDFLib.degrees(st.rotation));
-
-  // Apply vector crop if requested
+  
   if (st.crop && st.crop.mode === 'vector' && st.crop.box) {
     try {
       const { width, height } = page.getSize();
@@ -553,35 +944,45 @@ async function exportPageToBytesVector(st){
       const t = st.crop.box.t * height;
       const w = st.crop.box.w * width;
       const h = st.crop.box.h * height;
-      // attempt official API, else fallback to low-level
+      
       if (typeof page.setCropBox === 'function') {
         page.setCropBox(l, height - (t + h), l + w, height - t);
       } else {
-        const cropArray = [PDFLib.PDFNumber.of(l), PDFLib.PDFNumber.of(height - (t + h)), PDFLib.PDFNumber.of(l + w), PDFLib.PDFNumber.of(height - t)];
+        const cropArray = [
+          PDFLib.PDFNumber.of(l),
+          PDFLib.PDFNumber.of(height - (t + h)),
+          PDFLib.PDFNumber.of(l + w),
+          PDFLib.PDFNumber.of(height - t)
+        ];
         page.node.set(PDFLib.PDFName.of('CropBox'), PDFLib.PDFArray.fromArray(cropArray, newDoc.context));
       }
-    } catch(e){
-      console.warn('Vector crop not supported; continuing without crop', e);
+    } catch (e) {
+      console.warn('Vector crop not supported, continuing without crop:', e);
     }
   }
-
+  
   newDoc.addPage(page);
-  const bytes = await newDoc.save();
-  return bytes;
+  const pdfBytes = await newDoc.save();
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  saveAs(blob, `${filePrefix}.pdf`);
 }
 
-async function exportPageToBytesRaster(st){
-  // Reuse the raster export logic but return bytes instead of saving
+async function exportSingleRaster(st, filePrefix) {
   const pNum = st.idx;
   const page = await pdfJsDoc.getPage(pNum);
   const scaleFactor = 2.5 * (window.devicePixelRatio || 1);
   const viewport = page.getViewport({ scale: scaleFactor });
+  
   const canvas = document.createElement('canvas');
   canvas.width = Math.floor(viewport.width);
   canvas.height = Math.floor(viewport.height);
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width, canvas.height);
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
   await page.render({ canvasContext: ctx, viewport }).promise;
+  
   let cropCanvas = canvas;
   if (st.crop && st.crop.mode !== 'none' && st.crop.box) {
     const c = document.createElement('canvas');
@@ -589,50 +990,231 @@ async function exportPageToBytesRaster(st){
     const sy = Math.round(st.crop.box.t * canvas.height);
     const sw = Math.round(st.crop.box.w * canvas.width);
     const sh = Math.round(st.crop.box.h * canvas.height);
-    c.width = sw; c.height = sh;
+    
+    c.width = sw;
+    c.height = sh;
     const cctx = c.getContext('2d');
     cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
     cropCanvas = c;
   }
+  
   const blob = await new Promise(res => cropCanvas.toBlob(res, 'image/png', 0.95));
   const arrBuf = await blob.arrayBuffer();
+  
   const newDoc = await PDFLib.PDFDocument.create();
   const img = await newDoc.embedPng(arrBuf);
   const { width, height } = img.scale(1);
   const pagePdf = newDoc.addPage([width, height]);
-  pagePdf.drawImage(img, { x:0, y:0, width, height });
-  if (st.rotation && st.rotation % 360 !== 0) pagePdf.setRotation(PDFLib.degrees(st.rotation));
+  
+  pagePdf.drawImage(img, { x: 0, y: 0, width, height });
+  
+  if (st.rotation && st.rotation % 360 !== 0) {
+    pagePdf.setRotation(PDFLib.degrees(st.rotation));
+  }
+  
+  const pdfBytes = await newDoc.save();
+  saveAs(new Blob([pdfBytes], { type: 'application/pdf' }), `${filePrefix}-raster.pdf`);
+}
+
+async function exportAll({ rasterFallback = false } = {}) {
+  if (!pdfLibDoc || pageState.length === 0) {
+    alert('No PDF loaded or no pages to export');
+    return;
+  }
+  
+  // Disable buttons during export
+  btnExportAll.disabled = true;
+  btnExportAllRaster.disabled = true;
+  btnClear.disabled = true;
+  
+  setProgress(0);
+  logStatus('🚀 Starting batch export...');
+  
+  const zip = new JSZip();
+  const total = pageState.length;
+  let completed = 0;
+  const failedPages = [];
+  
+  for (let i = 0; i < pageState.length; i++) {
+    const st = pageState[i];
+    
+    try {
+      let pdfBytes;
+      
+      try {
+        pdfBytes = await exportPageToBytesVector(st);
+        zip.file(`page-${st.idx}.pdf`, pdfBytes);
+      } catch (ve) {
+        console.warn('Vector export failed, trying raster:', ve);
+        if (rasterFallback) {
+          pdfBytes = await exportPageToBytesRaster(st);
+          zip.file(`page-${st.idx}-raster.pdf`, pdfBytes);
+        } else {
+          throw ve;
+        }
+      }
+      
+      completed++;
+      setProgress(completed / total * 0.8); // Reserve 20% for ZIP generation
+      logStatus(`📄 Processed ${completed}/${total} pages...`);
+    } catch (err) {
+      console.error('Page export failed:', st.idx, err);
+      st.failed = true;
+      failedPages.push(st.idx);
+    }
+    
+    await new Promise(r => setTimeout(r, 50)); // Smooth progress updates
+  }
+  
+  if (failedPages.length > 0) {
+    logStatus(`⚠️ ${failedPages.length} pages failed. Continuing with successful pages...`);
+  }
+  
+  if (completed > 0) {
+    logStatus('📦 Generating ZIP file...');
+    const content = await zip.generateAsync({ type: 'blob' }, (meta) => {
+      setProgress(0.8 + (meta.percent / 100) * 0.2);
+    });
+    
+    const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(/:/g, '-');
+    saveAs(content, `pdf-pages_${timestamp}.zip`);
+    
+    logStatus(`✅ Export complete! ${completed} pages exported successfully.`);
+  } else {
+    logStatus('❌ All pages failed to export. Please check your PDF file.');
+  }
+  
+  // Re-enable buttons
+  btnExportAll.disabled = false;
+  btnExportAllRaster.disabled = false;
+  btnClear.disabled = false;
+  
+  setProgress(1);
+  refreshAllCards(); // Update UI to show any failures
+}
+
+async function exportPageToBytesVector(st) {
+  const original = await PDFLib.PDFDocument.load(originalPdfBytes);
+  const newDoc = await PDFLib.PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(original, [st.idx - 1]);
+  const page = copiedPages[0];
+  
+  if (st.rotation && st.rotation % 360 !== 0) {
+    page.setRotation(PDFLib.degrees(st.rotation));
+  }
+  
+  if (st.crop && st.crop.mode === 'vector' && st.crop.box) {
+    try {
+      const { width, height } = page.getSize();
+      const l = st.crop.box.l * width;
+      const t = st.crop.box.t * height;
+      const w = st.crop.box.w * width;
+      const h = st.crop.box.h * height;
+      
+      if (typeof page.setCropBox === 'function') {
+        page.setCropBox(l, height - (t + h), l + w, height - t);
+      } else {
+        const cropArray = [
+          PDFLib.PDFNumber.of(l),
+          PDFLib.PDFNumber.of(height - (t + h)),
+          PDFLib.PDFNumber.of(l + w),
+          PDFLib.PDFNumber.of(height - t)
+        ];
+        page.node.set(PDFLib.PDFName.of('CropBox'), PDFLib.PDFArray.fromArray(cropArray, newDoc.context));
+      }
+    } catch (e) {
+      console.warn('Vector crop not supported:', e);
+    }
+  }
+  
+  newDoc.addPage(page);
   return await newDoc.save();
 }
 
-// utilities
-function clearAll(){
-  for(const p of pageState) if(p.thumbnailUrl) URL.revokeObjectURL(p.thumbnailUrl);
-  pageState = []; pagesEl.innerHTML=''; info.innerHTML=''; setProgress(0); logStatus('Idle'); pdfJsDoc = null; originalPdfBytes = null; pdfLibDoc = null;
+async function exportPageToBytesRaster(st) {
+  const pNum = st.idx;
+  const page = await pdfJsDoc.getPage(pNum);
+  const scaleFactor = 2.5 * (window.devicePixelRatio || 1);
+  const viewport = page.getViewport({ scale: scaleFactor });
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+  const ctx = canvas.getContext('2d');
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  
+  let cropCanvas = canvas;
+  if (st.crop && st.crop.mode !== 'none' && st.crop.box) {
+    const c = document.createElement('canvas');
+    const sx = Math.round(st.crop.box.l * canvas.width);
+    const sy = Math.round(st.crop.box.t * canvas.height);
+    const sw = Math.round(st.crop.box.w * canvas.width);
+    const sh = Math.round(st.crop.box.h * canvas.height);
+    
+    c.width = sw;
+    c.height = sh;
+    const cctx = c.getContext('2d');
+    cctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    cropCanvas = c;
+  }
+  
+  const blob = await new Promise(res => cropCanvas.toBlob(res, 'image/png', 0.95));
+  const arrBuf = await blob.arrayBuffer();
+  
+  const newDoc = await PDFLib.PDFDocument.create();
+  const img = await newDoc.embedPng(arrBuf);
+  const { width, height } = img.scale(1);
+  const pagePdf = newDoc.addPage([width, height]);
+  
+  pagePdf.drawImage(img, { x: 0, y: 0, width, height });
+  
+  if (st.rotation && st.rotation % 360 !== 0) {
+    pagePdf.setRotation(PDFLib.degrees(st.rotation));
+  }
+  
+  return await newDoc.save();
 }
 
-function resetState(){
+function clearAll() {
+  for (const p of pageState) {
+    if (p.thumbnailUrl) URL.revokeObjectURL(p.thumbnailUrl);
+  }
+  pageState = [];
+  pagesEl.innerHTML = '';
+  info.innerHTML = '';
+  setProgress(0);
+  logStatus('Ready to process your PDF files');
+  pdfJsDoc = null;
+  originalPdfBytes = null;
+  pdfLibDoc = null;
+}
+
+function resetState() {
   clearAll();
-  pagesEl.innerHTML=''; info.innerHTML='<div class="small">Loading PDF…</div>';
+  info.innerHTML = '<div class="info">🔄 Loading PDF...</div>';
 }
 
-// Try to load from ?url= param (CORS permitting)
-async function loadFromUrlParam(){
+// Load from URL parameter (if provided)
+async function loadFromUrlParam() {
   try {
     const params = new URLSearchParams(location.search);
     const url = params.get('url');
-    if(!url) return;
-    info.innerHTML = '<div class="small">Fetching PDF from URL…</div>';
+    if (!url) return;
+    
+    info.innerHTML = '<div class="info">🌐 Fetching PDF from URL...</div>';
     const res = await fetch(url);
     const ab = await res.arrayBuffer();
     originalPdfBytes = ab;
     await loadDocs(ab);
   } catch (e) {
-    console.warn('URL load failed', e);
+    console.warn('URL load failed:', e);
+    logStatus('Failed to load PDF from URL. Please upload a file manually.');
   }
 }
-loadFromUrlParam();
 
-</script>
-</body>
-</html>
+// Initialize
+loadFromUrlParam();
