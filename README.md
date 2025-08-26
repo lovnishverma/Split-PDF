@@ -32,7 +32,7 @@ No backend required – everything runs locally in the browser! 🚀
 ## 🚀 Usage
 1. Clone or download this repository:
    ```bash
-   git clone https://github.com/your-username/pdf-splitter-tool.git
+   git clone https://github.com/lovnishverma/pdf-splitter-tool.git
    cd pdf-splitter-tool
    ````
 
